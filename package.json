@@ -1,8 +1,16 @@
 {
   "name": "spinora",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A polished, privacy-first random-picker winner wheel. Fully client-side — no accounts, no uploads, no server.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeevannar16-web/Pickora.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -40,7 +48,6 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.7.0",
-    "uuid": "^14.0.2",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -53,7 +60,6 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.1",
     "jsdom": "^30.1.0",

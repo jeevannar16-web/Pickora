@@ -202,7 +202,6 @@ function WheelInner({
   const outerR = size / 2 - 6;
   const innerR = size * 0.18;
   const labelR = size * 0.36;
-  const direction = settings.spinDirection === "counterclockwise" ? -1 : 1;
   const slice = count > 0 ? TAU / count : TAU;
 
   const colors = useMemo(
@@ -473,10 +472,10 @@ function WheelInner({
               {count > 0 &&
                 pack.id !== 'custom' &&
                 segmentDefs.map((seg, i) => {
-                  const labelAngle = seg.mid * direction;
+                  const labelAngle = seg.mid;
                   const iconRadius = pack.id === 'numbers' ? labelR : labelR * 0.56;
                   const pos = polarToCartesian(cx, cy, iconRadius, labelAngle);
-                  const textRot = (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const textRot = radiansToDegrees(seg.mid) + 90;
                   const iconFont =
                     pack.id === 'numbers'
                       ? Math.max(12, Math.min(22, size / (largeCount ? 13 : mediumCount ? 11 : 8.5)))
@@ -517,10 +516,8 @@ function WheelInner({
                 segmentDefs.map((seg, i) => {
                   const p = eligible[i];
                   const isHover = interactive && hovered === i;
-                  const labelAngle = seg.mid * direction;
-                  const pos = polarToCartesian(cx, cy, labelR, labelAngle);
-                  const textRot =
-                    (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const pos = polarToCartesian(cx, cy, labelR, seg.mid);
+                  const textRot = radiansToDegrees(seg.mid) + 90;
                   const lines = truncated
                     ? [truncateLabel(p.name, maxChars)]
                     : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);

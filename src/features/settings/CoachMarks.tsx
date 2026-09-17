@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, X } from 'lucide-react';
 
@@ -10,15 +10,14 @@ const STORAGE_KEY = 'spinora.coachmarks.dismissed';
  * with the X button or by just scrolling past it. Cleared forever on dismiss.
  */
 export function CoachMarks() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
+  const [visible, setVisible] = useState(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
+      return !localStorage.getItem(STORAGE_KEY);
     } catch {
       // storage unavailable — skip coaching
+      return false;
     }
-  }, []);
+  });
 
   const dismiss = () => {
     try {

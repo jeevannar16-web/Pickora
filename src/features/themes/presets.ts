@@ -111,10 +111,10 @@ export const THEMES: Record<string, Theme> = {
     background: '#0A0A0A',
     surface: '#111111',
     elevated: '#181818',
-    segmentColors: ['#404040', '#525252', '#3F3F46', '#4B5563', '#374151', '#6B7280', '#52525B', '#44403C'],
+    segmentColors: ['#525252', '#6B7280', '#3F3F46', '#8B8B8B', '#374151', '#7C7C7C', '#4B5563', '#9A9A9A'],
     pointerColor: '#FAFAFA',
     hubColor: '#262626',
-    confettiColors: ['#404040', '#525252', '#3F3F46', '#4B5563', '#374151'],
-    buttonColor: '#404040',
+    confettiColors: ['#6B7280', '#9A9A9A', '#4B5563', '#8B8B8B', '#3F3F46'],
+    buttonColor: '#525252',
   },
 };

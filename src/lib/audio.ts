@@ -2,6 +2,8 @@ class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
+  private droneOsc: OscillatorNode | null = null;
+  private droneGain: GainNode | null = null;
 
   private ensureContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -95,6 +97,52 @@ class AudioEngine {
     this.playTone({ freqStart: 160, freqEnd: 520, duration: 0.32, type: 'sawtooth', volume: 0.03 });
   }
 
+  /* Act 1 — anticipatory pull: a low, rising swell that sells the wind-up. */
+  windupSwell() {
+    this.playTone({ freqStart: 90, freqEnd: 340, duration: 0.5, type: 'sawtooth', volume: 0.032 });
+    this.playTone({ freqStart: 45, freqEnd: 120, duration: 0.52, type: 'sine', volume: 0.05 });
+    this.playNoise({ duration: 0.42, volume: 0.05 });
+  }
+
+  /* Tension-aware tick: lower & heavier the slower the wheel moves. */
+  tickTension(freq: number, volume = 0.028) {
+    this.playTone({ freqStart: freq, freqEnd: freq * 0.86, duration: 0.05, type: 'square', volume });
+  }
+
+  /* Act 3 — sustained low drone held while the wheel settles on its winner. */
+  startDrone() {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain || this.droneOsc) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(64, ctx.currentTime);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.055, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    this.droneOsc = osc;
+    this.droneGain = gain;
+  }
+
+  stopDrone() {
+    if (!this.ctx || !this.droneOsc || !this.droneGain) return;
+    const t = this.ctx.currentTime;
+    this.droneGain.gain.setValueAtTime(this.droneGain.gain.value, t);
+    this.droneGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    const osc = this.droneOsc;
+    this.droneOsc = null;
+    this.droneGain = null;
+    osc.stop(t + 0.22);
+  }
+
+  /* Sharp impact the instant the wheel locks onto its winner. */
+  snap() {
+    this.playTone({ freqStart: 240, freqEnd: 70, duration: 0.1, type: 'square', volume: 0.06 });
+    this.playNoise({ duration: 0.09, volume: 0.09 });
+  }
+
   tick() {
     this.playTone({ freqStart: 1000, freqEnd: 800, duration: 0.045, type: 'square', volume: 0.028 });
   }
@@ -118,6 +166,7 @@ class AudioEngine {
   }
 
   dispose() {
+    this.stopDrone();
     if (this.ctx) {
       void this.ctx.close().catch(() => {});
       this.ctx = null;

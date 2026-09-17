@@ -19,6 +19,7 @@ type WheelState = {
   setShowLabels: (b: boolean) => void;
   setLabelSize: (n: number) => void;
   setReduceMotion: (b: boolean) => void;
+  setSettings: (updates: Partial<WheelSettings>) => void;
   resetSettings: () => void;
 };
 
@@ -64,7 +65,9 @@ export const useWheelStore = create<WheelState>()(
         set((s) => ({ settings: { ...s.settings, labelSize } })),
       setReduceMotion: (reduceMotionOn) =>
         set((s) => ({ settings: { ...s.settings, reduceMotionOn } })),
-      resetSettings: () => set({ settings: defaultSettings }),
+      setSettings: (updates) =>
+        set((s) => ({ settings: { ...s.settings, ...updates } })),
+      resetSettings: () => set({ settings: { ...defaultSettings } }),
     }),
     {
       name: 'spinora-wheel',

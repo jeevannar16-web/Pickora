@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useParticipantStore } from '@/stores/participantStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useWheelStore } from '@/stores/wheelStore';
@@ -16,6 +16,37 @@ const WINDUP_MS = 400;
 const LANDING_MS = 500;
 const WIN_FLASH_MS = 460;
 const WINDUP_DEG = 4;
+const WIN_REVEAL_FIRST_MS = 60;
+const WIN_REVEAL_STEP_MS = 620;
+const WIN_REVEAL_PAD_MS = 260;
+
+// The animation driver lives at module scope, NOT inside the hook: swapping
+// layouts on a breakpoint resize unmounts WheelStage mid-spin, and the loop
+// must survive that remount (otherwise the wheel freezes with isSpinning=true).
+// `spin()` guards on isSpinning, so only one spin can run at a time.
+let rafRef: number | null = null;
+let tickTimerRef: ReturnType<typeof setInterval> | null = null;
+let winTimerRef: ReturnType<typeof setTimeout> | null = null;
+let lastSegRef = -1;
+let lastFrameRef = 0;
+let lastRotationRef = 0;
+let speedRef = 0;
+let phaseRef: SpinPhase = 'idle';
+
+export function cancelSpinAnimation() {
+  if (rafRef !== null) {
+    cancelAnimationFrame(rafRef);
+    rafRef = null;
+  }
+  if (tickTimerRef !== null) {
+    clearInterval(tickTimerRef);
+    tickTimerRef = null;
+  }
+  if (winTimerRef !== null) {
+    clearTimeout(winTimerRef);
+    winTimerRef = null;
+  }
+}
 
 export function useSpin() {
   const participants = useParticipantStore((s) => s.participants);
@@ -39,44 +70,26 @@ export function useSpin() {
   const setWinnerIndexes = useDrawStore((s) => s.setWinnerIndexes);
   const prefersReducedMotion = usePrefersReducedMotion();
 
-  const rafRef = useRef<number | null>(null);
-  const tickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const winTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSegRef = useRef<number>(-1);
-  const lastFrameRef = useRef<number>(0);
-  const lastRotationRef = useRef<number>(0);
-  const speedRef = useRef<number>(0);
-  const phaseRef = useRef<SpinPhase>('idle');
-  const [statusText, setStatusText] = useState('');
-
   const eligible = useMemo(() => getEligibleParticipants(participants), [participants]);
 
   useEffect(() => {
     setEligibleCount(eligible.length);
   }, [eligible.length, setEligibleCount]);
 
-  const cancelAnimation = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (tickTimerRef.current) {
-      clearInterval(tickTimerRef.current);
-      tickTimerRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
+    // Only stop audio on unmount — the rAF loop itself is intentionally NOT
+    // cancelled so a spin survives layout swaps (e.g. a breakpoint resize) and
+    // presentation-mode transitions while isSpinning is true.
     return () => {
-      cancelAnimation();
-      if (winTimerRef.current) clearTimeout(winTimerRef.current);
       audio.stopDrone();
     };
-  }, [cancelAnimation]);
+  }, []);
 
   const spin = useCallback(() => {
     if (isSpinning) return;
-    const validation = validateParticipantCount(winnerCount, eligible.length);
+    // Defensive context-aware clamp: never ask for more winners than exist.
+    const activeWinnerCount = Math.max(1, Math.min(winnerCount, Math.max(1, eligible.length)));
+    const validation = validateParticipantCount(activeWinnerCount, eligible.length);
     if (!validation.valid) {
       useUIStore.getState().showToast(validation.message ?? 'Cannot spin with current settings.', 'error');
       audio.error();
@@ -88,11 +101,11 @@ export function useSpin() {
       const w = selectRandomWinner(eligible);
       winners = w ? [w] : [];
     } else if (winnerMode === 'multi') {
-      winners = selectRandomWinners(eligible, winnerCount, allowDuplicates);
+      winners = selectRandomWinners(eligible, activeWinnerCount, allowDuplicates);
     } else {
       winners = allowDuplicates
-        ? selectRandomWinners(eligible, winnerCount, true)
-        : selectRandomWinners(eligible, winnerCount, false);
+        ? selectRandomWinners(eligible, activeWinnerCount, true)
+        : selectRandomWinners(eligible, activeWinnerCount, false);
     }
     if (winners.length === 0) return;
 
@@ -112,8 +125,17 @@ export function useSpin() {
     const rotations = settings.customRotations ?? speedConfig.rotations;
     const duration = reduced ? 1.2 : settings.customDuration ?? speedConfig.duration;
 
-    // The exact final resting angle — unchanged, purely determined by which winner was drawn.
-    const finalTarget = computeFinalWheelRotation(winnerIndexes[0] ?? 0, count, rotations, direction);
+    // The final resting angle: determined by which winner was drawn, constrained
+    // to the winner slice's safe inner zone (excludes wedge gaps + edge buffer).
+    const finalTarget = computeFinalWheelRotation(
+      winnerIndexes[0] ?? 0,
+      count,
+      rotations,
+      direction,
+      90,
+      settings.segmentSpacing,
+      Math.random,
+    );
     const dramatic = !reduced && settings.speed === 'dramatic';
 
     const masterOn = sound.masterEnabled;
@@ -122,7 +144,6 @@ export function useSpin() {
     setIsSpinning(true);
     setPhase('idle');
     setWinnerIndexes([...winnerIndexes]);
-    setStatusText(reduced ? 'Selecting winner…' : 'Spinning…');
 
     if (!reduced) {
       audio.spinStart();
@@ -142,7 +163,6 @@ export function useSpin() {
         setPhase('idle');
         setWinnerIndexes([]);
         setIsSpinning(false);
-        setStatusText('');
 
         if (masterOn && sound.winnerSoundEnabled) {
           audio.winner();
@@ -181,7 +201,11 @@ export function useSpin() {
       };
 
       if (!reduced) {
-        winTimerRef.current = setTimeout(commit, WIN_FLASH_MS);
+        // Multi-winner draws showcase each winner's slice in turn on the wheel,
+        // so the win window must stay open until the final reveal plays.
+        const revealTotal =
+          WIN_REVEAL_FIRST_MS + Math.max(0, winnerIndexes.length - 1) * WIN_REVEAL_STEP_MS;
+        winTimerRef = setTimeout(commit, Math.max(WIN_FLASH_MS, revealTotal + WIN_REVEAL_PAD_MS));
       } else {
         commit();
       }
@@ -193,11 +217,11 @@ export function useSpin() {
       const mainMs = duration * 1000;
       const totalMs = WINDUP_MS + mainMs + LANDING_MS;
       const spinRange = finalTarget - windupDeg;
-      lastSegRef.current = -1;
-      lastFrameRef.current = startTime;
-      lastRotationRef.current = 0;
-      speedRef.current = 0;
-      phaseRef.current = 'idle';
+      lastSegRef = -1;
+      lastFrameRef = startTime;
+      lastRotationRef = 0;
+      speedRef = 0;
+      phaseRef = 'idle';
       audio.stopDrone();
 
       const easeFunctions: Record<string, (t: number) => number> = {
@@ -233,8 +257,8 @@ export function useSpin() {
 
         if (elapsed <= WINDUP_MS) {
           current = overture(elapsed);
-          if (phaseRef.current !== 'windup') {
-            phaseRef.current = 'windup';
+          if (phaseRef !== 'windup') {
+            phaseRef = 'windup';
             setPhase('windup');
             if (dramaSound) audio.windupSwell();
           }
@@ -242,8 +266,8 @@ export function useSpin() {
           const u = Math.min(1, (elapsed - WINDUP_MS) / (mainMs + LANDING_MS));
           current = windupDeg + spinRange * mainEase(u);
           const phaseNow = elapsed >= WINDUP_MS + mainMs ? 'landing' : 'spin';
-          if (phaseRef.current !== phaseNow) {
-            phaseRef.current = phaseNow;
+          if (phaseRef !== phaseNow) {
+            phaseRef = phaseNow;
             setPhase(phaseNow);
             if (phaseNow === 'landing' && dramaSound) {
               audio.startDrone();
@@ -253,30 +277,30 @@ export function useSpin() {
 
         setRotation(current);
 
-        const dt = now - lastFrameRef.current;
+        const dt = now - lastFrameRef;
         if (dt > 0) {
-          speedRef.current = (Math.abs(current - lastRotationRef.current) / dt) * 1000;
+          speedRef = (Math.abs(current - lastRotationRef) / dt) * 1000;
         }
         if (masterOn && sound.tickSoundEnabled) {
           const seg = getSegmentIndexFromAngle(current, count);
-          if (seg !== lastSegRef.current && seg >= 0) {
-            lastSegRef.current = seg;
-            const freq = Math.round(Math.min(1000, 430 + speedRef.current * 0.62));
-            const heaviness = Math.min(0.042, Math.max(0.02, 0.035 - speedRef.current * 0.00002));
+          if (seg !== lastSegRef && seg >= 0) {
+            lastSegRef = seg;
+            const freq = Math.round(Math.min(1000, 430 + speedRef * 0.62));
+            const heaviness = Math.min(0.042, Math.max(0.02, 0.035 - speedRef * 0.00002));
             audio.tickTension(freq, heaviness);
           }
         }
-        lastFrameRef.current = now;
-        lastRotationRef.current = current;
+        lastFrameRef = now;
+        lastRotationRef = current;
 
         if (elapsed < totalMs) {
-          rafRef.current = requestAnimationFrame(animate);
+          rafRef = requestAnimationFrame(animate);
         } else {
           finish(current);
         }
       };
 
-      rafRef.current = requestAnimationFrame(animate);
+      rafRef = requestAnimationFrame(animate);
     } else {
       // Reduced motion: no overture, no false-deceleration, no landing drama.
       const startTime = performance.now();
@@ -287,12 +311,12 @@ export function useSpin() {
         const current = finalTarget * easing(progress);
         setRotation(current);
         if (progress < 1) {
-          rafRef.current = requestAnimationFrame(animate);
+          rafRef = requestAnimationFrame(animate);
         } else {
           finish(current);
         }
       };
-      rafRef.current = requestAnimationFrame(animate);
+      rafRef = requestAnimationFrame(animate);
     }
   }, [
     isSpinning,
@@ -319,7 +343,6 @@ export function useSpin() {
   return {
     spin,
     isSpinning,
-    statusText,
     eligibleCount: eligible.length,
   };
 }

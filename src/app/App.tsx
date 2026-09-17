@@ -70,15 +70,14 @@ function DesktopLayout() {
     <div className="grid flex-1 overflow-hidden border-t border-border-c md:grid-cols-[300px_1fr_320px]">
       <aside className="min-h-0 overflow-hidden border-r border-border-c bg-surface/40">
         <div className="h-full">
-          {activePanel === 'settings' ? <SettingsPanel /> : null}
           {activePanel === 'history' ? <HistoryView /> : null}
-          {(activePanel === 'wheel' || activePanel === 'participants') ? <ParticipantPanel /> : null}
+          {activePanel !== 'history' ? <ParticipantPanel /> : null}
         </div>
       </aside>
       <main className="min-h-0 overflow-hidden">
         <WheelStage />
       </main>
-      <aside className="hidden min-h-0 overflow-hidden border-l border-border-c bg-surface/40 lg:block">
+      <aside className="hidden min-h-0 overflow-hidden border-l border-border-c bg-surface/40 md:block">
         <SettingsPanel />
       </aside>
     </div>

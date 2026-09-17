@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Participant } from "@/types/participant";
 import { Theme } from "@/types/theme";
@@ -146,6 +146,29 @@ function WheelInner({
   );
   const count = eligible.length;
   const reduced = usePrefersReducedMotion() || settings.reduceMotionOn;
+  const highSpeed = !reduced && (phase === "windup" || phase === "spin");
+
+  // Sequential reveal for multi-winner draws: each winner's slice lights up in
+  // turn after the wheel stops (approach b), so the outcome is showcased on the
+  // wheel itself, not just listed in the modal afterward. Timings mirror the
+  // win-window held open in useSpin (WIN_REVEAL_FIRST_MS / WIN_REVEAL_STEP_MS).
+  const WIN_REVEAL_FIRST_MS = 60;
+  const WIN_REVEAL_STEP_MS = 620;
+  const [revealCount, setRevealCount] = useState(0);
+  useEffect(() => {
+    if (phase !== "win") {
+      const t = setTimeout(() => setRevealCount(0), 0);
+      return () => clearTimeout(t);
+    }
+    if (revealCount < winnerIndexes.length) {
+      const t = setTimeout(
+        () => setRevealCount((c) => c + 1),
+        revealCount === 0 ? WIN_REVEAL_FIRST_MS : WIN_REVEAL_STEP_MS,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [phase, revealCount, winnerIndexes.length]);
+  const revealedWinners = phase === "win" ? winnerIndexes.slice(0, revealCount) : [];
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 6;
@@ -322,6 +345,12 @@ function WheelInner({
         <filter id="spinora-halo" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="16" />
         </filter>
+        <filter id="spinora-blur" x="-12%" y="-12%" width="124%" height="124%">
+          <feGaussianBlur stdDeviation="2 0" />
+        </filter>
+        <filter id="spinora-win-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
         <radialGradient id="spinora-hub-sheen" cx="36%" cy="32%" r="80%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
           <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
@@ -339,7 +368,7 @@ function WheelInner({
         {count === 0 ? (
           emptyRing
         ) : (
-          <g transform={`rotate(${rotation} ${cx} ${cy})`}>
+          <g transform={`rotate(${rotation} ${cx} ${cy})`} filter={highSpeed ? "url(#spinora-blur)" : undefined}>
             {(settings.type === "classic" || settings.type === "party") && (
               <path
                 d={ringPath}
@@ -347,86 +376,126 @@ function WheelInner({
                 opacity={0.12}
               />
             )}
-            {segmentDefs.map((seg, i) => {
-              const p = eligible[i];
-              return (
-                <path
-                  key={p.id}
-                  d={seg.d}
-                  fill={
-                    settings.type === "monochrome"
-                      ? theme.segmentColors[
-                          i % Math.max(1, theme.segmentColors.length)
-                        ]
-                      : colors[i]
-                  }
-                  stroke={theme.wheelBorder}
-                  strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
-                  strokeLinejoin="round"
-                />
-              );
-            })}
-
-            {settings.showLabels &&
-              segmentDefs.map((seg, i) => {
+            <motion.g
+              animate={{ opacity: phase === "win" ? 0.3 : 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              {segmentDefs.map((seg, i) => {
                 const p = eligible[i];
-                const labelAngle = seg.mid * direction;
-                const pos = polarToCartesian(cx, cy, labelR, labelAngle);
-                const textRot =
-                  (radiansToDegrees(seg.mid) * direction + 90) % 360;
-                const lines = truncated
-                  ? [truncateLabel(p.name, maxChars)]
-                  : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);
                 return (
-                  <g
+                  <path
                     key={p.id}
-                    transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
-                  >
-                    {lines.map((ln, li) => (
-                      <text
-                        key={li}
-                        x={0}
-                        y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fontSize={fontSize}
-                        fontWeight={600}
-                        fill={theme.labelColor}
-                        style={{
-                          pointerEvents: "none",
-                          userSelect: "none",
-                          paintOrder: "stroke",
-                          stroke: "rgba(0,0,0,0.35)",
-                          strokeWidth: 2.5,
-                        }}
-                      >
-                        {ln}
-                      </text>
-                    ))}
-                    {truncated && (p.name.length > maxChars || p.name.length > 0) && (
-                      <title>{p.name}</title>
-                    )}
-                  </g>
+                    d={seg.d}
+                    fill={
+                      settings.type === "monochrome"
+                        ? theme.segmentColors[
+                            i % Math.max(1, theme.segmentColors.length)
+                          ]
+                        : colors[i]
+                    }
+                    stroke={theme.wheelBorder}
+                    strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
+                    strokeLinejoin="round"
+                  />
                 );
               })}
 
-            {phase === "win" &&
-              winnerIndexes.map((wi) => {
+              {settings.showLabels &&
+                segmentDefs.map((seg, i) => {
+                  const p = eligible[i];
+                  const labelAngle = seg.mid * direction;
+                  const pos = polarToCartesian(cx, cy, labelR, labelAngle);
+                  const textRot =
+                    (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const lines = truncated
+                    ? [truncateLabel(p.name, maxChars)]
+                    : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
+                    >
+                      {lines.map((ln, li) => (
+                        <text
+                          key={li}
+                          x={0}
+                          y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize={fontSize}
+                          fontWeight={600}
+                          fill={theme.labelColor}
+                          style={{
+                            pointerEvents: "none",
+                            userSelect: "none",
+                            paintOrder: "stroke",
+                            stroke: "rgba(0,0,0,0.35)",
+                            strokeWidth: 2.5,
+                          }}
+                        >
+                          {ln}
+                        </text>
+                      ))}
+                      {truncated && (p.name.length > maxChars || p.name.length > 0) && (
+                        <title>{p.name}</title>
+                      )}
+                    </g>
+                  );
+                })}
+            </motion.g>
+
+            {!reduced && (phase === "windup" || phase === "spin" || phase === "landing") && (
+              <motion.circle
+                cx={cx}
+                cy={cy}
+                r={innerR * 1.4}
+                fill={theme.hubColor}
+                filter="url(#spinora-halo)"
+                animate={{ opacity: [0.25, 0.6, 0.25] }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
+
+            {revealedWinners.map((wi, ri) => {
                 const seg = segmentDefs[wi];
                 if (!seg) return null;
+                const isLatest = ri === revealCount - 1;
                 return (
-                  <motion.path
-                    key={`win-${wi}`}
-                    d={seg.d}
-                    fill={theme.labelColor}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 0.75, 0.18, 0.6, 0] }}
-                    transition={{
-                      duration: 0.55,
-                      times: [0, 0.2, 0.5, 0.75, 1],
-                      ease: "easeOut",
-                    }}
-                  />
+                  <g key={`win-reveal-${wi}`}>
+                    {isLatest && (
+                      <motion.path
+                        d={seg.d}
+                        fill={theme.labelColor}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.75, 0.18, 0.6, 0] }}
+                        transition={{
+                          duration: 0.55,
+                          times: [0, 0.2, 0.5, 0.75, 1],
+                          ease: "easeOut",
+                        }}
+                      />
+                    )}
+                    <motion.path
+                      d={seg.d}
+                      fill="none"
+                      stroke={theme.accent}
+                      strokeWidth={isLatest ? 4 : 2.5}
+                      strokeLinejoin="round"
+                      filter="url(#spinora-win-glow)"
+                      initial={{ opacity: 0, scale: 1 }}
+                      animate={
+                        isLatest
+                          ? { opacity: [0, 1, 1], scale: [1, 1.09, 1.04] }
+                          : { opacity: 0.9, scale: 1 }
+                      }
+                      transition={
+                        isLatest
+                          ? { duration: 0.5, times: [0, 0.5, 1], ease: "easeOut" }
+                          : { duration: 0.3 }
+                      }
+                      style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
+                    />
+                  </g>
                 );
               })}
 

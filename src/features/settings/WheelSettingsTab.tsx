@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { type ReactNode } from 'react';
 import { useWheelStore } from '@/stores/wheelStore';
 import { WheelType } from '@/types/wheel';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -16,6 +17,18 @@ const WHEEL_TYPES: { id: WheelType; label: string }[] = [
   { id: 'party', label: 'Party' },
 ];
 
+function Field({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-text">{label}</label>
+      </div>
+      {children}
+      <p className="-mt-1 text-[11px] leading-relaxed text-muted">{hint}</p>
+    </div>
+  );
+}
+
 export function WheelSettingsTab() {
   const settings = useWheelStore((s) => s.settings);
   const setType = useWheelStore((s) => s.setType);
@@ -27,8 +40,7 @@ export function WheelSettingsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Wheel type</label>
+      <Field label="Wheel type" hint="The overall look of the wheel. Your theme picks one for you.">
         <div className="grid grid-cols-2 gap-1.5">
           {WHEEL_TYPES.map((t) => (
             <button
@@ -45,10 +57,9 @@ export function WheelSettingsTab() {
             </button>
           ))}
         </div>
-      </div>
+      </Field>
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Spin direction</label>
+      <Field label="Spin direction" hint="Which way the wheel turns when it spins.">
         <Select value={settings.spinDirection} onValueChange={(v) => setSpinDirection(v as 'clockwise' | 'counterclockwise')}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -56,11 +67,10 @@ export function WheelSettingsTab() {
             <SelectItem value="counterclockwise">Counterclockwise</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      <div className="space-y-2">
+      <Field label="Space between slices" hint="The gap between each slice. Small looks tight, 0 removes it.">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-muted">Segment spacing</label>
           <span className="text-xs text-primary">{settings.segmentSpacing}px</span>
         </div>
         <Slider
@@ -70,16 +80,14 @@ export function WheelSettingsTab() {
           step={1}
           onValueChange={(v) => setSegmentSpacing(v[0])}
         />
-      </div>
+      </Field>
 
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted">Show labels</label>
+      <Field label="Show names" hint="Draw each person's name on its slice.">
         <Switch checked={settings.showLabels} onCheckedChange={setShowLabels} />
-      </div>
+      </Field>
 
-      <div className="space-y-2">
+      <Field label="Name size" hint="How big the labels on the slices are.">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-muted">Label size</label>
           <span className="text-xs text-primary">{settings.labelSize}px</span>
         </div>
         <Slider
@@ -89,16 +97,15 @@ export function WheelSettingsTab() {
           step={1}
           onValueChange={(v) => setLabelSize(v[0])}
         />
-      </div>
+      </Field>
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Segment colors</label>
+      <Field label="Palette in use" hint="The slice colors for this theme. Tweak them under Themes below.">
         <div className="flex flex-wrap gap-1.5">
           {theme.segmentColors.slice(0, 8).map((c, i) => (
             <span key={i} className="h-6 w-6 rounded-md" style={{ background: c }} />
           ))}
         </div>
-      </div>
+      </Field>
     </div>
   );
 }

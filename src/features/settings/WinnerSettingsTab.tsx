@@ -1,9 +1,32 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useParticipantStore } from '@/stores/participantStore';
 import { getEligibleParticipants } from '@/lib/random';
+
+function Field({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-text">{label}</label>
+      {children}
+      <p className="-mt-1 text-[11px] leading-relaxed text-muted">{hint}</p>
+    </div>
+  );
+}
+
+function Row({ label, hint, checked, onCheckedChange }: { label: string; hint: string; checked: boolean; onCheckedChange: (b: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <div className="text-sm text-text">{label}</div>
+        <div className="text-[11px] leading-relaxed text-muted">{hint}</div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
+    </div>
+  );
+}
 
 export function WinnerSettingsTab() {
   const winnerMode = useSettingsStore((s) => s.winnerMode);
@@ -21,8 +44,7 @@ export function WinnerSettingsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Winner mode</label>
+      <Field label="Winner mode" hint="How winners are picked. Multi picks several at once; Sequential draws one every spin; Elimination removes each winner automatically.">
         <Select value={winnerMode} onValueChange={(v) => setWinnerMode(v as typeof winnerMode)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -32,48 +54,37 @@ export function WinnerSettingsTab() {
             <SelectItem value="elimination">Elimination mode</SelectItem>
           </SelectContent>
         </Select>
-        {winnerMode !== 'single' && (
-          <p className="text-[11px] text-muted">
-            {winnerMode === 'multi' && 'Select several winners in one spin.'}
-            {winnerMode === 'sequential' && 'Winners are drawn one per spin, one after another.'}
-            {winnerMode === 'elimination' && 'Each spin removes the winner from the pool.'}
-          </p>
-        )}
-      </div>
+      </Field>
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Number of winners</label>
+      <Field label="Number of winners" hint="How many people this spin should pick. (Quick options up top covers the common cases.)">
         <Input
           type="number"
           min={1}
+          max={Math.max(1, eligibleCount)}
+          aria-label="Number of winners (customize)"
           value={winnerCount}
-          onChange={(e) => setWinnerCount(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e) => setWinnerCount(Math.max(1, Math.min(parseInt(e.target.value) || 1, Math.max(1, eligibleCount))))}
         />
         {invalid && (
           <p className="text-xs text-danger">
-            Winner count must be between 1 and {Math.max(0, eligibleCount)} eligible participant{eligibleCount === 1 ? '' : 's'}.
+            Must be between 1 and {Math.max(0, eligibleCount)} eligible participant{eligibleCount === 1 ? '' : 's'}.
           </p>
         )}
-        <p className="text-[11px] text-muted">
-          {eligibleCount} eligible participant{eligibleCount === 1 ? '' : 's'} currently.
-        </p>
-      </div>
+      </Field>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm text-text">Allow duplicate winners</div>
-          <div className="text-xs text-muted">Same participant can win twice</div>
-        </div>
-        <Switch checked={allowDuplicates} onCheckedChange={setAllowDuplicates} aria-label="Allow duplicate winners" />
-      </div>
+      <Row
+        label="Allow duplicate winners"
+        hint="The same person can win again in the same spin or across spins."
+        checked={allowDuplicates}
+        onCheckedChange={setAllowDuplicates}
+      />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm text-text">Remove winners from list</div>
-          <div className="text-xs text-muted">Auto-remove after a draw</div>
-        </div>
-        <Switch checked={removeWinners} onCheckedChange={setRemoveWinners} aria-label="Remove winners from list" />
-      </div>
+      <Row
+        label="Remove winners from list"
+        hint="Take winners out of the list after a draw, so they can't win again."
+        checked={removeWinners}
+        onCheckedChange={setRemoveWinners}
+      />
     </div>
   );
 }

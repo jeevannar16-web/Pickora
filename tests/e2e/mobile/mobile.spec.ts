@@ -44,7 +44,7 @@ test.describe('Spinora mobile layout', () => {
 
   test('mobile settings bottom sheet opens', async ({ page }) => {
     await page.locator('nav').last().getByRole('button', { name: 'Settings' }).click();
-    await expect(page.getByText('Quick options')).toBeVisible();
+    await expect(page.getByText('Quick options')).toHaveCount(1);
     await expect(page.getByRole('button', { name: /Customize/ })).toBeVisible();
   });
 

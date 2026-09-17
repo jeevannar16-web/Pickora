@@ -9,6 +9,8 @@ import { AnimationSettingsTab } from './AnimationSettingsTab';
 import { SoundSettingsTab } from './SoundSettingsTab';
 import { WinnerSettingsTab } from './WinnerSettingsTab';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useParticipantStore } from '@/stores/participantStore';
+import { getEligibleParticipants } from '@/lib/random';
 import { cn } from '@/lib/utils';
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -27,6 +29,12 @@ export function SettingsPanel() {
   const setWinnerCount = useSettingsStore((s) => s.setWinnerCount);
   const winnerMode = useSettingsStore((s) => s.winnerMode);
   const setWinnerMode = useSettingsStore((s) => s.setWinnerMode);
+  const participants = useParticipantStore((s) => s.participants);
+
+  const eligibleCount = getEligibleParticipants(participants).length;
+  const maxWinners = Math.max(1, Math.min(5, eligibleCount));
+  const winnerOptions = Array.from({ length: maxWinners }, (_, i) => i + 1);
+  const displayedCount = Math.min(winnerCount, maxWinners);
 
   const handleCountChange = (n: number) => {
     setWinnerCount(n);
@@ -55,19 +63,21 @@ export function SettingsPanel() {
             <label htmlFor="quick-winner-count" className="text-xs font-medium text-muted">
               Number of winners
             </label>
-            <Select value={String(winnerCount)} onValueChange={(v) => handleCountChange(parseInt(v, 10))}>
+            <Select value={String(displayedCount)} onValueChange={(v) => handleCountChange(parseInt(v, 10))}>
               <SelectTrigger id="quick-winner-count" className="h-9 w-full" aria-label="Number of winners">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[1, 2, 3, 4, 5].map((n) => (
+                {winnerOptions.map((n) => (
                   <SelectItem key={n} value={String(n)}>
                     {n} {n === 1 ? 'winner' : 'winners'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="-mt-1 text-[11px] text-muted">How many people this spin should pick.</p>
+            <p className="-mt-1 text-[11px] text-muted">
+              How many people this spin should pick{eligibleCount > 0 ? `, up to your ${eligibleCount} eligible name${eligibleCount === 1 ? '' : 's'}` : ''}.
+            </p>
           </div>
         </section>
 

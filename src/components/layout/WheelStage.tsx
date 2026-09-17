@@ -1,4 +1,4 @@
-import { Play, Expand, Users, Settings2, History, Loader2 } from 'lucide-react';
+import { Play, Expand, Users, History, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Wheel } from '@/components/wheel/Wheel';
@@ -47,6 +47,7 @@ export function WheelStage() {
   const rotation = useWheelStore((s) => s.rotation);
   const settings = useWheelStore((s) => s.settings);
   const theme = useSettingsStore((s) => s.theme);
+  const winnerCount = useSettingsStore((s) => s.winnerCount);
   const isSpinning = useUIStore((s) => s.isSpinning);
   const setIsPresenting = useUIStore((s) => s.setIsPresenting);
   const setActivePanel = useUIStore((s) => s.setActivePanel);
@@ -133,6 +134,16 @@ export function WheelStage() {
       </div>
 
       <div className="relative z-40 flex w-full max-w-md flex-col items-center gap-2">
+        {winnerCount > 1 && (
+          <p
+            className="flex items-center gap-1.5 rounded-full border border-border-c bg-surface/70 px-3 py-1 text-[11px] font-medium text-text"
+            aria-live="polite"
+            data-testid="winner-count-cue"
+          >
+            {isSpinning ? 'Drawing…' : 'Drawing'} {winnerCount} winners
+          </p>
+        )}
+
         {!canSpin && (
           <EmptyState
             isMobile={isMobile}
@@ -163,12 +174,6 @@ export function WheelStage() {
                 className={cn('flex items-center gap-1.5 rounded-lg border border-border-c bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:text-text')}
               >
                 <Users className="h-3.5 w-3.5" /> Participants
-              </button>
-              <button
-                onClick={() => setActivePanel('settings')}
-                className="flex items-center gap-1.5 rounded-lg border border-border-c bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:text-text"
-              >
-                <Settings2 className="h-3.5 w-3.5" /> Settings
               </button>
               <button
                 onClick={() => setActivePanel('history')}

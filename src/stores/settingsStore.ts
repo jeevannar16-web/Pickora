@@ -5,6 +5,8 @@ import { THEMES } from '../features/themes/presets';
 import { WinnerMode } from '../types/settings';
 import { SoundSettings } from '../types/sound';
 import { useWheelStore } from './wheelStore';
+import { useParticipantStore } from './participantStore';
+import { getEligibleParticipants } from '../lib/random';
 
 type SettingsState = {
   activeThemeId: string;
@@ -119,7 +121,33 @@ export const useSettingsStore = create<SettingsState>()(
         if (state) {
           state.theme = resolveTheme(state.activeThemeId, state.customThemes ?? []);
         }
+        clampWinnerCountToEligible();
       },
     }
   )
 );
+
+// Winner count is context-aware, not a static number:
+// - with very few participants (2-4) the suggested default is 1 — "3 winners
+//   from 3 people" isn't a real choice;
+// - otherwise the value is clamped live to the current eligible participant
+//   count so a spin can never silently ask for more winners than exist.
+function normalizeWinnerCount(current: number, eligible: number): number {
+  if (eligible <= 0) return Math.max(1, current);
+  if (eligible <= 4) return 1;
+  return Math.max(1, Math.min(current, eligible));
+}
+
+function clampWinnerCountToEligible() {
+  const eligible = getEligibleParticipants(useParticipantStore.getState().participants).length;
+  const settings = useSettingsStore.getState();
+  const next = normalizeWinnerCount(settings.winnerCount, eligible);
+  if (next !== settings.winnerCount) {
+    settings.setWinnerCount(next);
+  }
+}
+
+useParticipantStore.subscribe((state, prev) => {
+  if (state.participants === prev.participants) return;
+  clampWinnerCountToEligible();
+});

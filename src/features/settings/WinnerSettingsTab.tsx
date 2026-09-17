@@ -60,9 +60,10 @@ export function WinnerSettingsTab() {
         <Input
           type="number"
           min={1}
+          max={Math.max(1, eligibleCount)}
           aria-label="Number of winners (customize)"
           value={winnerCount}
-          onChange={(e) => setWinnerCount(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e) => setWinnerCount(Math.max(1, Math.min(parseInt(e.target.value) || 1, Math.max(1, eligibleCount))))}
         />
         {invalid && (
           <p className="text-xs text-danger">

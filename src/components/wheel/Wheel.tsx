@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Participant } from "@/types/participant";
 import { Theme } from "@/types/theme";
@@ -147,6 +147,28 @@ function WheelInner({
   const count = eligible.length;
   const reduced = usePrefersReducedMotion() || settings.reduceMotionOn;
   const highSpeed = !reduced && (phase === "windup" || phase === "spin");
+
+  // Sequential reveal for multi-winner draws: each winner's slice lights up in
+  // turn after the wheel stops (approach b), so the outcome is showcased on the
+  // wheel itself, not just listed in the modal afterward. Timings mirror the
+  // win-window held open in useSpin (WIN_REVEAL_FIRST_MS / WIN_REVEAL_STEP_MS).
+  const WIN_REVEAL_FIRST_MS = 60;
+  const WIN_REVEAL_STEP_MS = 620;
+  const [revealCount, setRevealCount] = useState(0);
+  useEffect(() => {
+    if (phase !== "win") {
+      const t = setTimeout(() => setRevealCount(0), 0);
+      return () => clearTimeout(t);
+    }
+    if (revealCount < winnerIndexes.length) {
+      const t = setTimeout(
+        () => setRevealCount((c) => c + 1),
+        revealCount === 0 ? WIN_REVEAL_FIRST_MS : WIN_REVEAL_STEP_MS,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [phase, revealCount, winnerIndexes.length]);
+  const revealedWinners = phase === "win" ? winnerIndexes.slice(0, revealCount) : [];
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 6;
@@ -434,23 +456,46 @@ function WheelInner({
               />
             )}
 
-            {phase === "win" &&
-              winnerIndexes.map((wi) => {
+            {revealedWinners.map((wi, ri) => {
                 const seg = segmentDefs[wi];
                 if (!seg) return null;
+                const isLatest = ri === revealCount - 1;
                 return (
-                  <motion.path
-                    key={`win-${wi}`}
-                    d={seg.d}
-                    fill={theme.labelColor}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 0.75, 0.18, 0.6, 0] }}
-                    transition={{
-                      duration: 0.55,
-                      times: [0, 0.2, 0.5, 0.75, 1],
-                      ease: "easeOut",
-                    }}
-                  />
+                  <g key={`win-reveal-${wi}`}>
+                    {isLatest && (
+                      <motion.path
+                        d={seg.d}
+                        fill={theme.labelColor}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.75, 0.18, 0.6, 0] }}
+                        transition={{
+                          duration: 0.55,
+                          times: [0, 0.2, 0.5, 0.75, 1],
+                          ease: "easeOut",
+                        }}
+                      />
+                    )}
+                    <motion.path
+                      d={seg.d}
+                      fill="none"
+                      stroke={theme.accent}
+                      strokeWidth={isLatest ? 4 : 2.5}
+                      strokeLinejoin="round"
+                      filter="url(#spinora-win-glow)"
+                      initial={{ opacity: 0, scale: 1 }}
+                      animate={
+                        isLatest
+                          ? { opacity: [0, 1, 1], scale: [1, 1.09, 1.04] }
+                          : { opacity: 0.9, scale: 1 }
+                      }
+                      transition={
+                        isLatest
+                          ? { duration: 0.5, times: [0, 0.5, 1], ease: "easeOut" }
+                          : { duration: 0.3 }
+                      }
+                      style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
+                    />
+                  </g>
                 );
               })}
 
@@ -485,27 +530,6 @@ function WheelInner({
               fill={theme.background}
               opacity={0.5}
             />
-
-            {phase === "win" &&
-              winnerIndexes.map((wi) => {
-                const seg = segmentDefs[wi];
-                if (!seg) return null;
-                return (
-                  <motion.path
-                    key={`win-pop-${wi}`}
-                    d={seg.d}
-                    fill="none"
-                    stroke={theme.accent}
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                    filter="url(#spinora-win-glow)"
-                    initial={{ scale: 1, opacity: 0 }}
-                    animate={{ scale: [1, 1.08, 1.05], opacity: [0, 1, 1] }}
-                    transition={{ duration: 0.46, times: [0, 0.55, 1], ease: "easeOut" }}
-                    style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
-                  />
-                );
-              })}
           </g>
         )}
       </g>

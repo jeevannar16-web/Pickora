@@ -50,9 +50,9 @@ export function WinnerModal() {
               {lastWinners.names.map((name, i) => (
                 <motion.div
                   key={`${lastWinners.drawId}-${i}`}
-                  initial={{ opacity: 0, scale: 0.7, y: 12 }}
+                  initial={{ opacity: 0, scale: 0.85, y: 16 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.15 + i * 0.18, type: 'spring', stiffness: 300, damping: 20 }}
+                  transition={{ delay: 0.1 + i * 0.12, type: 'spring', stiffness: 420, damping: 28 }}
                   className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3"
                 >
                   <span

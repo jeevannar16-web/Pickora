@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Plus,
   Trash2,
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useParticipantStore } from '@/stores/participantStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useDrawStore } from '@/stores/drawStore';
 import { MAX_PARTICIPANTS } from '@/lib/validation';
 import { parseParticipantCSV, exportCSV } from '@/lib/csv';
 import { copyToClipboard, downloadTextFile } from '@/lib/utils';
@@ -49,6 +50,13 @@ export function ParticipantPanel() {
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkRef = useRef<HTMLTextAreaElement>(null);
+  const setGhostName = useDrawStore((s) => s.setGhostName);
+
+  const clearGhost = useCallback(() => setGhostName(''), [setGhostName]);
+
+  useEffect(() => {
+    return clearGhost;
+  }, [clearGhost]);
 
   const enabledCount = participants.filter((p) => p.enabled).length;
   const filtered = participants.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
@@ -61,7 +69,8 @@ export function ParticipantPanel() {
     }
     setValidationMsg(null);
     setName('');
-  }, [name, addParticipant]);
+    setGhostName('');
+  }, [name, addParticipant, setGhostName]);
 
   const handleAddMultiple = useCallback(() => {
     const lines = bulkText
@@ -182,6 +191,7 @@ export function ParticipantPanel() {
           value={name}
           onChange={(e) => {
             setName(e.target.value);
+            setGhostName(e.target.value);
             setValidationMsg(null);
           }}
           onKeyDown={(e) => {

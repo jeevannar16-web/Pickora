@@ -9,7 +9,7 @@ export function ThemeSelector() {
   const showToast = useUIStore((s) => s.showToast);
 
   const allThemes = [
-    ...Object.values(THEMES),
+    ...Object.values(THEMES).filter((t) => !t.curated),
     ...useSettingsStore((s) => s.customThemes),
   ];
 

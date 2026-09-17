@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { Wheel } from '@/components/wheel/Wheel';
 import { Button } from '@/components/ui/button';
 import { useUIStore } from '@/stores/uiStore';
@@ -84,9 +84,10 @@ export function PresentationMode() {
             }
           }}
           disabled={isSpinning || eligible.length === 0}
+          aria-label="Spin"
           className="h-16 min-w-64 rounded-full bg-gradient-to-r from-primary to-secondary text-xl text-white shadow-2xl"
         >
-          {isSpinning ? 'Spinning…' : 'Spin'}
+          {isSpinning ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" /> : 'Spin'}
         </Button>
         <p className="mt-2 text-xs text-white/40">Press Space to spin · Esc to exit</p>
       </div>

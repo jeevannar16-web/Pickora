@@ -44,8 +44,8 @@ test.describe('Spinora mobile layout', () => {
 
   test('mobile settings bottom sheet opens', async ({ page }) => {
     await page.locator('nav').last().getByRole('button', { name: 'Settings' }).click();
-    await expect(page.getByRole('tab', { name: 'Wheel' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Winner' })).toBeVisible();
+    await expect(page.getByText('Quick options')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Customize/ })).toBeVisible();
   });
 
   test('no horizontal overflow on mobile', async ({ page }) => {

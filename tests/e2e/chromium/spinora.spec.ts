@@ -6,8 +6,8 @@ async function addNames(page: Page, names: string[]) {
   await page.getByRole('button', { name: 'Add all' }).click();
 }
 
-async function openWinnerSettings(page: Page) {
-  await page.getByRole('tab', { name: 'Winner' }).click();
+async function openCustomize(page: Page) {
+  await page.getByRole('button', { name: /Customize/ }).click();
 }
 
 test.describe('Spinora core flows', () => {
@@ -40,7 +40,7 @@ test.describe('Spinora core flows', () => {
 
   test('remove winners from the list', async ({ page }) => {
     await addNames(page, ['One', 'Two', 'Three', 'Four']);
-    await openWinnerSettings(page);
+    await openCustomize(page);
     await page.getByLabel('Remove winners from list').click({ trial: true });
     await page.getByLabel('Remove winners from list').click();
     const namesBefore = await page.locator('ul[role="list"] li').count();
@@ -63,7 +63,6 @@ test.describe('Spinora core flows', () => {
 
   test('change theme from the settings panel', async ({ page }) => {
     await addNames(page, ['Alice', 'Bob']);
-    await page.getByRole('tab', { name: 'Theme' }).click();
     await page.getByLabel('Apply Ocean theme').click();
     await expect(page.getByLabel('Apply Ocean theme')).toHaveAttribute('aria-pressed', 'true');
   });

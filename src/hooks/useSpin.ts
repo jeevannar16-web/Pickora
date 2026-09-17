@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParticipantStore } from '@/stores/participantStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useWheelStore } from '@/stores/wheelStore';
@@ -47,7 +47,6 @@ export function useSpin() {
   const lastRotationRef = useRef<number>(0);
   const speedRef = useRef<number>(0);
   const phaseRef = useRef<SpinPhase>('idle');
-  const [statusText, setStatusText] = useState('');
 
   const eligible = useMemo(() => getEligibleParticipants(participants), [participants]);
 
@@ -122,7 +121,6 @@ export function useSpin() {
     setIsSpinning(true);
     setPhase('idle');
     setWinnerIndexes([...winnerIndexes]);
-    setStatusText(reduced ? 'Selecting winner…' : 'Spinning…');
 
     if (!reduced) {
       audio.spinStart();
@@ -142,7 +140,6 @@ export function useSpin() {
         setPhase('idle');
         setWinnerIndexes([]);
         setIsSpinning(false);
-        setStatusText('');
 
         if (masterOn && sound.winnerSoundEnabled) {
           audio.winner();
@@ -319,7 +316,6 @@ export function useSpin() {
   return {
     spin,
     isSpinning,
-    statusText,
     eligibleCount: eligible.length,
   };
 }

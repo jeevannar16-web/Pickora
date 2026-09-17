@@ -4,6 +4,7 @@ import { Theme } from '../types/theme';
 import { THEMES } from '../features/themes/presets';
 import { WinnerMode } from '../types/settings';
 import { SoundSettings } from '../types/sound';
+import { useWheelStore } from './wheelStore';
 
 type SettingsState = {
   activeThemeId: string;
@@ -34,6 +35,17 @@ function resolveTheme(activeId: string, customThemes: Theme[]): Theme {
   return THEMES[activeId] ?? THEMES.aurora;
 }
 
+// A preset is ONE named experience: when it's applied, its look goes with its
+// motion feel and sound profile. Master volume / reduced-sound stay user-owned.
+function applyThemeBundles(theme: Theme, setSound: (u: Partial<SoundSettings>) => void) {
+  if (theme.motion) {
+    useWheelStore.getState().setSettings(theme.motion);
+  }
+  if (theme.sound) {
+    setSound(theme.sound);
+  }
+}
+
 const defaultSound: SoundSettings = {
   masterEnabled: true,
   masterVolume: 50,
@@ -58,6 +70,7 @@ export const useSettingsStore = create<SettingsState>()(
       setTheme: (activeThemeId) => {
         const theme = resolveTheme(activeThemeId, get().customThemes);
         set({ activeThemeId, theme });
+        applyThemeBundles(theme, get().setSound);
       },
 
       saveCustomTheme: (theme) => {
@@ -82,6 +95,7 @@ export const useSettingsStore = create<SettingsState>()(
         const presetId = get().activeThemeId.replace('custom:', '');
         const preset = THEMES[presetId] ?? THEMES.aurora;
         set({ activeThemeId: preset.id, theme: preset });
+        applyThemeBundles(preset, get().setSound);
       },
 
       setSound: (updates) => set({ sound: { ...get().sound, ...updates } }),

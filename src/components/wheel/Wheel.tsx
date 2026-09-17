@@ -146,6 +146,7 @@ function WheelInner({
   );
   const count = eligible.length;
   const reduced = usePrefersReducedMotion() || settings.reduceMotionOn;
+  const highSpeed = !reduced && (phase === "windup" || phase === "spin");
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 6;
@@ -322,6 +323,12 @@ function WheelInner({
         <filter id="spinora-halo" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="16" />
         </filter>
+        <filter id="spinora-blur" x="-12%" y="-12%" width="124%" height="124%">
+          <feGaussianBlur stdDeviation="2 0" />
+        </filter>
+        <filter id="spinora-win-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
         <radialGradient id="spinora-hub-sheen" cx="36%" cy="32%" r="80%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
           <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
@@ -339,7 +346,7 @@ function WheelInner({
         {count === 0 ? (
           emptyRing
         ) : (
-          <g transform={`rotate(${rotation} ${cx} ${cy})`}>
+          <g transform={`rotate(${rotation} ${cx} ${cy})`} filter={highSpeed ? "url(#spinora-blur)" : undefined}>
             {(settings.type === "classic" || settings.type === "party") && (
               <path
                 d={ringPath}
@@ -347,68 +354,85 @@ function WheelInner({
                 opacity={0.12}
               />
             )}
-            {segmentDefs.map((seg, i) => {
-              const p = eligible[i];
-              return (
-                <path
-                  key={p.id}
-                  d={seg.d}
-                  fill={
-                    settings.type === "monochrome"
-                      ? theme.segmentColors[
-                          i % Math.max(1, theme.segmentColors.length)
-                        ]
-                      : colors[i]
-                  }
-                  stroke={theme.wheelBorder}
-                  strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
-                  strokeLinejoin="round"
-                />
-              );
-            })}
-
-            {settings.showLabels &&
-              segmentDefs.map((seg, i) => {
+            <motion.g
+              animate={{ opacity: phase === "win" ? 0.3 : 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              {segmentDefs.map((seg, i) => {
                 const p = eligible[i];
-                const labelAngle = seg.mid * direction;
-                const pos = polarToCartesian(cx, cy, labelR, labelAngle);
-                const textRot =
-                  (radiansToDegrees(seg.mid) * direction + 90) % 360;
-                const lines = truncated
-                  ? [truncateLabel(p.name, maxChars)]
-                  : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);
                 return (
-                  <g
+                  <path
                     key={p.id}
-                    transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
-                  >
-                    {lines.map((ln, li) => (
-                      <text
-                        key={li}
-                        x={0}
-                        y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fontSize={fontSize}
-                        fontWeight={600}
-                        fill={theme.labelColor}
-                        style={{
-                          pointerEvents: "none",
-                          userSelect: "none",
-                          paintOrder: "stroke",
-                          stroke: "rgba(0,0,0,0.35)",
-                          strokeWidth: 2.5,
-                        }}
-                      >
-                        {ln}
-                      </text>
-                    ))}
-                    {truncated && (p.name.length > maxChars || p.name.length > 0) && (
-                      <title>{p.name}</title>
-                    )}
-                  </g>
+                    d={seg.d}
+                    fill={
+                      settings.type === "monochrome"
+                        ? theme.segmentColors[
+                            i % Math.max(1, theme.segmentColors.length)
+                          ]
+                        : colors[i]
+                    }
+                    stroke={theme.wheelBorder}
+                    strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
+                    strokeLinejoin="round"
+                  />
                 );
               })}
+
+              {settings.showLabels &&
+                segmentDefs.map((seg, i) => {
+                  const p = eligible[i];
+                  const labelAngle = seg.mid * direction;
+                  const pos = polarToCartesian(cx, cy, labelR, labelAngle);
+                  const textRot =
+                    (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const lines = truncated
+                    ? [truncateLabel(p.name, maxChars)]
+                    : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
+                    >
+                      {lines.map((ln, li) => (
+                        <text
+                          key={li}
+                          x={0}
+                          y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize={fontSize}
+                          fontWeight={600}
+                          fill={theme.labelColor}
+                          style={{
+                            pointerEvents: "none",
+                            userSelect: "none",
+                            paintOrder: "stroke",
+                            stroke: "rgba(0,0,0,0.35)",
+                            strokeWidth: 2.5,
+                          }}
+                        >
+                          {ln}
+                        </text>
+                      ))}
+                      {truncated && (p.name.length > maxChars || p.name.length > 0) && (
+                        <title>{p.name}</title>
+                      )}
+                    </g>
+                  );
+                })}
+            </motion.g>
+
+            {!reduced && (phase === "windup" || phase === "spin" || phase === "landing") && (
+              <motion.circle
+                cx={cx}
+                cy={cy}
+                r={innerR * 1.4}
+                fill={theme.hubColor}
+                filter="url(#spinora-halo)"
+                animate={{ opacity: [0.25, 0.6, 0.25] }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
 
             {phase === "win" &&
               winnerIndexes.map((wi) => {
@@ -461,6 +485,27 @@ function WheelInner({
               fill={theme.background}
               opacity={0.5}
             />
+
+            {phase === "win" &&
+              winnerIndexes.map((wi) => {
+                const seg = segmentDefs[wi];
+                if (!seg) return null;
+                return (
+                  <motion.path
+                    key={`win-pop-${wi}`}
+                    d={seg.d}
+                    fill="none"
+                    stroke={theme.accent}
+                    strokeWidth={3}
+                    strokeLinejoin="round"
+                    filter="url(#spinora-win-glow)"
+                    initial={{ scale: 1, opacity: 0 }}
+                    animate={{ scale: [1, 1.08, 1.05], opacity: [0, 1, 1] }}
+                    transition={{ duration: 0.46, times: [0, 0.55, 1], ease: "easeOut" }}
+                    style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
+                  />
+                );
+              })}
           </g>
         )}
       </g>

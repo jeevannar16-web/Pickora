@@ -1,7 +1,18 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { type ReactNode } from 'react';
 import { useWheelStore } from '@/stores/wheelStore';
 import { Input } from '@/components/ui/input';
+
+function Field({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-text">{label}</label>
+      {children}
+      <p className="-mt-1 text-[11px] leading-relaxed text-muted">{hint}</p>
+    </div>
+  );
+}
 
 export function AnimationSettingsTab() {
   const settings = useWheelStore((s) => s.settings);
@@ -22,8 +33,10 @@ export function AnimationSettingsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Speed</label>
+      <Field
+        label="Spin speed"
+        hint="How long the spin lasts. Fast for snappy, Dramatic for a slow, suspenseful reveal."
+      >
         <div className="grid grid-cols-3 gap-1.5">
           {speedOptions.map((s) => (
             <button
@@ -40,10 +53,12 @@ export function AnimationSettingsTab() {
             </button>
           ))}
         </div>
-      </div>
+      </Field>
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted">Easing</label>
+      <Field
+        label="How it slows down"
+        hint="The curve the wheel follows as it comes to rest. Ease out = long, smooth stop."
+      >
         <Select value={settings.easing} onValueChange={(e) => setEasing(e as typeof settings.easing)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -53,11 +68,10 @@ export function AnimationSettingsTab() {
             <SelectItem value="easeOutQuart">Ease Out Quart</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted">Duration (s)</label>
+        <Field label="Spin length (s)" hint="Lower = quicker, higher = longer buildup.">
           <Input
             type="number"
             min={2}
@@ -69,9 +83,8 @@ export function AnimationSettingsTab() {
               setCustomDuration(Number.isNaN(v) ? null : Math.min(12, Math.max(2, v)));
             }}
           />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted">Rotations</label>
+        </Field>
+        <Field label="Full turns" hint="How many times the wheel rotates before stopping.">
           <Input
             type="number"
             min={4}
@@ -83,18 +96,16 @@ export function AnimationSettingsTab() {
               setCustomRotations(Number.isNaN(v) ? null : Math.min(40, Math.max(4, v)));
             }}
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted">Pointer bounce</label>
+      <Field label="Pointer bounce" hint="The pointer dips slightly as the wheel starts — a small bit of life.">
         <Switch checked={settings.pointerBounce} onCheckedChange={setPointerBounce} />
-      </div>
+      </Field>
 
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted">Reduced motion</label>
+      <Field label="Reduced motion" hint="Turns off most animation. Use it for a calm, snappy spin.">
         <Switch checked={settings.reduceMotionOn} onCheckedChange={setReduceMotion} />
-      </div>
+      </Field>
     </div>
   );
 }

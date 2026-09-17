@@ -120,9 +120,15 @@ export function WheelStage() {
           animate={
             prefersReducedMotion || settings.reduceMotionOn
               ? { scale: 1 }
-              : { scale: phaseScale(phase) }
+              : phase === 'win'
+                ? { scale: [1, 1.05, 0.99, 1] }
+                : { scale: phaseScale(phase) }
           }
-          transition={{ type: 'spring', stiffness: 110, damping: 16 }}
+          transition={
+            phase === 'win'
+              ? { duration: 0.5, times: [0, 0.4, 0.75, 1], ease: 'easeOut' }
+              : { type: 'spring', stiffness: 110, damping: 16 }
+          }
         >
           <motion.div
             className="h-full w-full transition-[filter] duration-300"

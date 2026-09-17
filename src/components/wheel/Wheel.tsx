@@ -29,10 +29,14 @@ const Pointer = memo(function Pointer({
   theme,
   size,
   phase,
+  tick,
+  bounceEnabled,
 }: {
   theme: Theme;
   size: number;
   phase: SpinPhase;
+  tick: number;
+  bounceEnabled: boolean;
 }) {
   const cx = size / 2;
   const cxp = cx;
@@ -111,6 +115,20 @@ const Pointer = memo(function Pointer({
         transformBox: "view-box" as const,
       }}
     >
+      {phase === "landing" && bounceEnabled && tick > 0 && (
+        <motion.g
+          key={tick}
+          animate={{ rotate: tick % 2 ? -2.6 : 3.4 }}
+          transition={{ type: "spring", stiffness: 1100, damping: 30 }}
+          style={{
+            transformOrigin: `${cxp}px ${size - 30}px`,
+            transformBox: "view-box" as const,
+          }}
+        >
+          {pointer}
+        </motion.g>
+      )}
+      {!(phase === "landing" && bounceEnabled && tick > 0) && pointer}
       <circle
         cx={cxp}
         cy={size - 12}
@@ -119,7 +137,6 @@ const Pointer = memo(function Pointer({
         stroke="rgba(0,0,0,0.25)"
         strokeWidth="1"
       />
-      {pointer}
     </motion.g>
   );
 });
@@ -134,11 +151,15 @@ function WheelInner({
   phase,
   winnerIndexes,
   ghostName,
+  landingTick,
+  bounceEnabled,
 }: Omit<WheelProps, "isSpinning"> & {
   isSpinning: boolean;
   phase: SpinPhase;
   winnerIndexes: number[];
   ghostName: string;
+  landingTick: number;
+  bounceEnabled: boolean;
 }) {
   const eligible = useMemo(
     () => getEligibleParticipants(participants),
@@ -510,6 +531,7 @@ function WheelInner({
                 const seg = segmentDefs[wi];
                 if (!seg) return null;
                 const isLatest = ri === revealCount - 1;
+                const winPos = polarToCartesian(cx, cy, labelR * 0.95, seg.mid);
                 return (
                   <g key={`win-reveal-${wi}`}>
                     {isLatest && (
@@ -522,6 +544,23 @@ function WheelInner({
                           duration: 0.55,
                           times: [0, 0.2, 0.5, 0.75, 1],
                           ease: "easeOut",
+                        }}
+                      />
+                    )}
+                    {isLatest && (
+                      <motion.circle
+                        cx={winPos.x}
+                        cy={winPos.y}
+                        r={labelR * 0.42}
+                        fill="none"
+                        stroke={theme.accent}
+                        strokeWidth={2.5}
+                        initial={{ opacity: 0.9, scale: 0.35 }}
+                        animate={{ opacity: 0, scale: 2.1 }}
+                        transition={{ duration: 0.95, ease: "easeOut" }}
+                        style={{
+                          transformOrigin: `${winPos.x}px ${winPos.y}px`,
+                          transformBox: "view-box" as const,
                         }}
                       />
                     )}
@@ -612,7 +651,13 @@ function WheelInner({
         )}
       </g>
 
-      <Pointer theme={theme} size={size} phase={phase} />
+      <Pointer
+        theme={theme}
+        size={size}
+        phase={phase}
+        tick={landingTick}
+        bounceEnabled={bounceEnabled}
+      />
     </svg>
   );
 }
@@ -622,6 +667,7 @@ export const Wheel = memo(function Wheel(props: WheelProps) {
   const phase = useDrawStore((s) => s.phase);
   const winnerIndexes = useDrawStore((s) => s.winnerIndexes);
   const ghostName = useDrawStore((s) => s.ghostName);
+  const landingTick = useDrawStore((s) => s.landingTick);
   return (
     <div
       className="relative w-full select-none"
@@ -638,6 +684,8 @@ export const Wheel = memo(function Wheel(props: WheelProps) {
         phase={phase}
         winnerIndexes={winnerIndexes}
         ghostName={ghostName}
+        landingTick={landingTick}
+        bounceEnabled={settings.pointerBounce}
       />
       {isSpinning && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

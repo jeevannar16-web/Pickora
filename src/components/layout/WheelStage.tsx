@@ -60,7 +60,7 @@ export function WheelStage() {
 
   const displaySize = isMobile ? 280 : 420;
   const actActive = phase === 'windup' || phase === 'spin' || phase === 'landing';
-  const dimActive = !prefersReducedMotion && actActive;
+  const dimActive = !prefersReducedMotion && (actActive || phase === 'win');
   const idleAmbient = !prefersReducedMotion && !settings.reduceMotionOn && !isSpinning && canSpin;
 
   return (
@@ -68,12 +68,15 @@ export function WheelStage() {
       {dimActive && (
         <motion.div
           initial={false}
-          animate={{ opacity: phase === 'landing' ? 0.55 : phase === 'spin' ? 0.34 : 0.24 }}
+          animate={{
+            opacity:
+              phase === 'win' ? 0.58 : phase === 'landing' ? 0.55 : phase === 'spin' ? 0.34 : 0.24,
+          }}
           transition={{ duration: 0.4 }}
           className="pointer-events-none fixed inset-0 z-30"
           style={{
             background:
-              'radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.42) 78%, rgba(0,0,0,0.66) 100%)',
+              'radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.45) 74%, rgba(0,0,0,0.72) 100%)',
           }}
         />
       )}

@@ -50,10 +50,8 @@ export function MiniWheel({
   const slice = TAU / derived;
   const gap = type === "minimal" || type === "monochrome" ? 0 : slice * 0.03;
 
-  const palette = (color: string, i: number): string => {
+  const palette = (color: string): string => {
     if (type === "monochrome") return desaturate(color);
-    if (type === "gradient") return color;
-    if (type === "party") return color;
     return color;
   };
 
@@ -94,7 +92,7 @@ export function MiniWheel({
         {Array.from({ length: derived }, (_, i) => {
           const start = i * slice + gap;
           const end = (i + 1) * slice - gap;
-          const fill = palette(colors[i % colors.length], i);
+          const fill = palette(colors[i % colors.length]);
           return (
             <path
               key={i}

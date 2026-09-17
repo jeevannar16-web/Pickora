@@ -109,6 +109,33 @@ class AudioEngine {
     this.playTone({ freqStart: freq, freqEnd: freq * 0.86, duration: 0.05, type: 'square', volume });
   }
 
+  /* Numbers pack: a sharp, metallic combination-lock tick. */
+  lockTick(freq: number, volume = 0.03) {
+    this.playTone({ freqStart: freq * 1.4, freqEnd: freq * 0.6, duration: 0.045, type: 'square', volume });
+    this.playTone({ freqStart: freq * 2.1, freqEnd: freq * 0.9, duration: 0.03, type: 'triangle', volume: volume * 0.5 });
+  }
+
+  /* Fruits pack: a juicy descending chime with a small pop. */
+  fruitWinner() {
+    [784, 659, 988].forEach((f, i) => {
+      this.playTone({ freqStart: f, duration: 0.18, type: 'sine', volume: 0.07, delay: i * 0.09 });
+    });
+    this.playNoise({ duration: 0.18, volume: 0.06, delay: 0.28 });
+  }
+
+  /* Animals pack: a playful double-boing. */
+  animalWinner() {
+    this.playTone({ freqStart: 300, freqEnd: 660, duration: 0.16, type: 'triangle', volume: 0.08 });
+    this.playTone({ freqStart: 440, freqEnd: 990, duration: 0.2, type: 'triangle', volume: 0.06, delay: 0.14 });
+  }
+
+  /* Numbers pack: a crisp click-then-chime resolution. */
+  numbersWinner() {
+    this.playTone({ freqStart: 680, freqEnd: 500, duration: 0.08, type: 'square', volume: 0.05 });
+    this.playTone({ freqStart: 880, freqEnd: 1760, duration: 0.34, type: 'sine', volume: 0.06, delay: 0.12 });
+    this.playTone({ freqStart: 440, freqEnd: 880, duration: 0.4, type: 'triangle', volume: 0.04, delay: 0.2 });
+  }
+
   /* Act 3 — sustained low drone held while the wheel settles on its winner. */
   startDrone() {
     const ctx = this.ensureContext();

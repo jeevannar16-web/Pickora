@@ -15,6 +15,8 @@ import {
 import { getEligibleParticipants } from "@/lib/random";
 import { useDrawStore, SpinPhase } from "@/stores/drawStore";
 import { usePrefersReducedMotion } from "@/hooks/useMediaQuery";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { PACKS } from "@/features/packs/presets";
 
 type WheelProps = {
   participants: Participant[];
@@ -170,6 +172,9 @@ function WheelInner({
   const highSpeed = !reduced && (phase === "windup" || phase === "spin");
   const [hovered, setHovered] = useState<number | null>(null);
   const interactive = !isSpinning && !highSpeed;
+  const activePack = useSettingsStore((s) => s.activePack);
+  const pack = PACKS[activePack] ?? PACKS.custom;
+  const packIcons = pack.icons ?? [];
 
   // Sequential reveal for multi-winner draws: each winner's slice lights up in
   // turn after the wheel stops (approach b), so the outcome is showcased on the
@@ -456,7 +461,50 @@ function WheelInner({
                 );
               })}
 
+              {count > 0 &&
+                pack.id !== 'custom' &&
+                segmentDefs.map((seg, i) => {
+                  const labelAngle = seg.mid * direction;
+                  const iconRadius = pack.id === 'numbers' ? labelR : labelR * 0.56;
+                  const pos = polarToCartesian(cx, cy, iconRadius, labelAngle);
+                  const textRot = (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const iconFont =
+                    pack.id === 'numbers'
+                      ? Math.max(12, Math.min(22, size / (largeCount ? 13 : mediumCount ? 11 : 8.5)))
+                      : Math.max(9, Math.min(19, size / (largeCount ? 26 : mediumCount ? 22 : 15)));
+                  return (
+                    <g
+                      key={`pack-${i}`}
+                      transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
+                    >
+                      <text
+                        x={0}
+                        y={0}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={iconFont}
+                        fontWeight={pack.id === 'numbers' ? 800 : 600}
+                        fill={pack.id === 'numbers' ? theme.labelColor : 'currentColor'}
+                        style={{
+                          pointerEvents: "none",
+                          userSelect: "none",
+                          paintOrder: "stroke",
+                          stroke:
+                            pack.id === 'numbers'
+                              ? `rgba(0,0,0,0.55)`
+                              : "rgba(0,0,0,0.45)",
+                          strokeWidth: pack.id === 'numbers' ? 3 : 1.5,
+                        }}
+                        aria-hidden="true"
+                      >
+                        {pack.id === 'numbers' ? i + 1 : packIcons[i % packIcons.length]}
+                      </text>
+                    </g>
+                  );
+                })}
+
               {settings.showLabels &&
+                pack.id !== 'numbers' &&
                 segmentDefs.map((seg, i) => {
                   const p = eligible[i];
                   const isHover = interactive && hovered === i;
@@ -574,12 +622,12 @@ function WheelInner({
                       initial={{ opacity: 0, scale: 1 }}
                       animate={
                         isLatest
-                          ? { opacity: [0, 1, 1], scale: [1, 1.09, 1.04] }
+                          ? { opacity: [0, 1, 0.95, 1], scale: [1, 1.12, 1.06, 1.08] }
                           : { opacity: 0.9, scale: 1 }
                       }
                       transition={
                         isLatest
-                          ? { duration: 0.5, times: [0, 0.5, 1], ease: "easeOut" }
+                          ? { duration: 0.62, times: [0, 0.4, 0.7, 1], ease: "easeOut" }
                           : { duration: 0.3 }
                       }
                       style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
@@ -650,6 +698,38 @@ function WheelInner({
           </motion.g>
         )}
       </g>
+
+      {interactive && hovered !== null && eligible[hovered] && (
+        <g pointerEvents="none" aria-hidden="true">
+          <motion.g
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            <rect
+              x={cx - Math.min(110, Math.max(42, eligible[hovered].name.length * 8 + 30)) / 2}
+              y={cy - outerR + 4}
+              width={Math.min(110, Math.max(42, eligible[hovered].name.length * 8 + 30))}
+              height={24}
+              rx={12}
+              fill={theme.surface}
+              stroke={theme.accent}
+              strokeWidth={1}
+            />
+            <text
+              x={cx}
+              y={cy - outerR + 16}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={12.5}
+              fontWeight={700}
+              fill={theme.text}
+            >
+              {eligible[hovered].name}
+            </text>
+          </motion.g>
+        </g>
+      )}
 
       <Pointer
         theme={theme}

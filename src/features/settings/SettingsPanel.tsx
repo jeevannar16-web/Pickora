@@ -8,6 +8,7 @@ import { WheelSettingsTab } from './WheelSettingsTab';
 import { AnimationSettingsTab } from './AnimationSettingsTab';
 import { SoundSettingsTab } from './SoundSettingsTab';
 import { WinnerSettingsTab } from './WinnerSettingsTab';
+import { PackSelector } from '@/features/packs/PackSelector';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useParticipantStore } from '@/stores/participantStore';
 import { getEligibleParticipants } from '@/lib/random';
@@ -57,6 +58,16 @@ export function SettingsPanel() {
             <label className="text-xs font-medium text-muted">Theme</label>
             <p className="-mt-1 text-[11px] text-muted">Your theme sets the colors, motion feel, and sounds together.</p>
             <ThemeLivePicker />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted">
+              Content pack
+            </label>
+            <p className="-mt-1 text-[11px] text-muted">
+              Adds icons, character, and a matching feel to every slice.
+            </p>
+            <PackSelector />
           </div>
 
           <div className="space-y-2">

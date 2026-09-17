@@ -392,11 +392,20 @@ function WheelInner({
         )}
       </defs>
 
-      <g filter="url(#wheel-shadow)">
+      <ellipse
+        cx={cx}
+        cy={cy}
+        rx={outerR * 1.02}
+        ry={outerR * 0.92}
+        fill="rgba(0,0,0,0.5)"
+        filter="url(#wheel-shadow)"
+        aria-hidden="true"
+      />
+      <g>
         {count === 0 ? (
           emptyRing
         ) : (
-          <g transform={`rotate(${rotation} ${cx} ${cy})`} filter={highSpeed ? "url(#spinora-blur)" : undefined}>
+          <g transform={`rotate(${rotation} ${cx} ${cy})`}>
             {(settings.type === "classic" || settings.type === "party") && (
               <path
                 d={ringPath}

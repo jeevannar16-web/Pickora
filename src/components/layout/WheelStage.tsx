@@ -12,21 +12,6 @@ import { useSpin } from '@/hooks/useSpin';
 import { useMediaQuery, usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
-function phaseShadow(phase: SpinPhase): string {
-  switch (phase) {
-    case 'windup':
-      return 'drop-shadow(0 8px 26px rgba(0,0,0,0.5)) drop-shadow(0 0 18px var(--sp-primary)33)';
-    case 'spin':
-      return 'drop-shadow(0 4px 32px rgba(0,0,0,0.62)) drop-shadow(0 0 24px var(--sp-accent)45)';
-    case 'landing':
-      return 'drop-shadow(0 2px 40px rgba(0,0,0,0.78)) drop-shadow(0 0 34px var(--sp-accent)66)';
-    case 'win':
-      return 'drop-shadow(0 10px 24px rgba(0,0,0,0.5)) drop-shadow(0 0 26px var(--sp-primary)44)';
-    default:
-      return 'drop-shadow(0 10px 22px rgba(0,0,0,0.35))';
-  }
-}
-
 function phaseScale(phase: SpinPhase): number {
   switch (phase) {
     case 'windup':
@@ -109,7 +94,7 @@ export function WheelStage() {
             style={{
               background: `radial-gradient(circle, ${theme.primary}55 0%, transparent 70%)`,
             }}
-            animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.12, 1] }}
+            animate={{ opacity: [0.55, 1, 0.55] }}
             transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
           />
         )}
@@ -134,7 +119,7 @@ export function WheelStage() {
           }
         >
           <motion.div
-            className="h-full w-full transition-[filter] duration-300"
+            className="h-full w-full"
             animate={
               idleAmbient
                 ? { scale: [1, 1.02, 1], y: [0, -3.5, 0] }
@@ -145,12 +130,6 @@ export function WheelStage() {
                 ? { duration: 4.6, repeat: Infinity, ease: 'easeInOut' }
                 : { duration: 0.1 }
             }
-            style={{
-              filter:
-                prefersReducedMotion || settings.reduceMotionOn
-                  ? 'drop-shadow(0 10px 22px rgba(0,0,0,0.35))'
-                  : phaseShadow(phase),
-            }}
           >
             <Wheel
               participants={participants}

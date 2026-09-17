@@ -31,7 +31,7 @@ const defaultSettings: WheelSettings = {
   customRotations: null,
   easing: 'easeOutQuart',
   pointerBounce: true,
-  segmentSpacing: 1,
+  segmentSpacing: 0,
   showLabels: true,
   truncateLabels: true,
   reduceMotionOn: false,

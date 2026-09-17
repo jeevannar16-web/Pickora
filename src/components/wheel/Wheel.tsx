@@ -644,7 +644,32 @@ function WheelInner({
               stroke={theme.wheelBorder}
               strokeWidth={2}
             />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={innerR * 0.35}
+              fill="none"
+              stroke={theme.primary}
+              opacity={0.4}
+              filter="url(#spinora-halo)"
+            />
             <circle cx={cx} cy={cy} r={innerR} fill="url(#spinora-hub-sheen)" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={innerR * 0.96}
+              fill="none"
+              stroke="rgba(255,255,255,0.4)"
+              strokeWidth={innerR * 0.07}
+              opacity={0.35}
+            />
+            <circle
+              cx={cx}
+              cy={cy - innerR * 0.55}
+              r={innerR * 0.32}
+              fill="#ffffff"
+              opacity={0.12}
+            />
             <circle
               cx={cx}
               cy={cy}

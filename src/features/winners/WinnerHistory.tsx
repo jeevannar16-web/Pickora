@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { History, Trash2, Copy, Download, RotateCcw, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { History, Trash2, Copy, Download, RotateCcw, X, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -80,8 +81,27 @@ export function WinnerHistory() {
           </div>
 
           {items.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border-c p-6 text-center text-sm text-muted">
-              No draws yet. Spin the wheel to start your history.
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-c px-6 py-8 text-center">
+              <div className="relative h-16 w-16">
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-dashed border-primary/40"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div
+                    animate={{ y: [0, -3, 0], rotate: [0, -6, 6, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary"
+                  >
+                    <Trophy className="h-5 w-5" />
+                  </motion.div>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text">No draws yet</p>
+                <p className="mt-1 text-xs text-muted">Spin the wheel to start your history.</p>
+              </div>
             </div>
           ) : (
             <div className="spinora-scroll max-h-80 space-y-2 overflow-y-auto">

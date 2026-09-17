@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Paintbrush, Palette, Zap, Volume2, Trophy, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeLivePicker } from './ThemeLivePicker';
 import { ThemeSelector } from './ThemeSelector';
@@ -14,10 +14,11 @@ import { useParticipantStore } from '@/stores/participantStore';
 import { getEligibleParticipants } from '@/lib/random';
 import { cn } from '@/lib/utils';
 
-function SectionTitle({ children }: { children: ReactNode }) {
+function SectionTitle({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
     <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
       <span className="h-px flex-1 bg-border-c" />
+      {icon && <span className="flex items-center gap-1.5">{icon}</span>}
       {children}
       <span className="h-px flex-1 bg-border-c" />
     </h3>
@@ -114,12 +115,12 @@ export function SettingsPanel() {
           {customizeOpen && (
             <div className="mt-3 space-y-5">
               <div aria-label="Appearance">
-                <SectionTitle>Appearance</SectionTitle>
+                <SectionTitle icon={<Paintbrush size={12} strokeWidth={2.5} />}>Appearance</SectionTitle>
                 <WheelSettingsTab />
               </div>
 
               <div aria-label="Themes">
-                <SectionTitle>Themes</SectionTitle>
+                <SectionTitle icon={<Palette size={12} strokeWidth={2.5} />}>Themes</SectionTitle>
                 <div className="space-y-3">
                   <div>
                     <p className="mb-1.5 text-[11px] text-muted">More looks:</p>
@@ -132,17 +133,17 @@ export function SettingsPanel() {
               </div>
 
               <div aria-label="Motion">
-                <SectionTitle>Motion</SectionTitle>
+                <SectionTitle icon={<Zap size={12} strokeWidth={2.5} />}>Motion</SectionTitle>
                 <AnimationSettingsTab />
               </div>
 
               <div aria-label="Sound">
-                <SectionTitle>Sound</SectionTitle>
+                <SectionTitle icon={<Volume2 size={12} strokeWidth={2.5} />}>Sound</SectionTitle>
                 <SoundSettingsTab />
               </div>
 
               <div aria-label="Winner rules">
-                <SectionTitle>Winner rules</SectionTitle>
+                <SectionTitle icon={<Trophy size={12} strokeWidth={2.5} />}>Winner rules</SectionTitle>
                 <WinnerSettingsTab />
               </div>
             </div>

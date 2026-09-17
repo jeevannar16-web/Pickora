@@ -61,6 +61,7 @@ export function WheelStage() {
   const displaySize = isMobile ? 280 : 420;
   const actActive = phase === 'windup' || phase === 'spin' || phase === 'landing';
   const dimActive = !prefersReducedMotion && actActive;
+  const idleAmbient = !prefersReducedMotion && !settings.reduceMotionOn && !isSpinning && canSpin;
 
   return (
     <div className="relative flex h-full flex-col items-center justify-between overflow-hidden p-4">
@@ -98,6 +99,17 @@ export function WheelStage() {
       </div>
 
       <div className="relative flex flex-1 items-center justify-center">
+        {idleAmbient && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute h-64 w-64 rounded-full md:h-80 md:w-80"
+            style={{
+              background: `radial-gradient(circle, ${theme.primary}55 0%, transparent 70%)`,
+            }}
+            animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.12, 1] }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
         <motion.div
           className="relative"
           style={{
@@ -114,6 +126,16 @@ export function WheelStage() {
         >
           <motion.div
             className="h-full w-full transition-[filter] duration-300"
+            animate={
+              idleAmbient
+                ? { scale: [1, 1.02, 1], y: [0, -3.5, 0] }
+                : { scale: 1, y: 0 }
+            }
+            transition={
+              idleAmbient
+                ? { duration: 4.6, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 0.1 }
+            }
             style={{
               filter:
                 prefersReducedMotion || settings.reduceMotionOn

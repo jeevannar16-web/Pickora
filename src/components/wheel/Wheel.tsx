@@ -147,6 +147,8 @@ function WheelInner({
   const count = eligible.length;
   const reduced = usePrefersReducedMotion() || settings.reduceMotionOn;
   const highSpeed = !reduced && (phase === "windup" || phase === "spin");
+  const [hovered, setHovered] = useState<number | null>(null);
+  const interactive = !isSpinning && !highSpeed;
 
   // Sequential reveal for multi-winner draws: each winner's slice lights up in
   // turn after the wheel stops (approach b), so the outcome is showcased on the
@@ -382,27 +384,61 @@ function WheelInner({
             >
               {segmentDefs.map((seg, i) => {
                 const p = eligible[i];
+                const isHover = interactive && hovered === i;
                 return (
-                  <path
+                  <g
                     key={p.id}
-                    d={seg.d}
-                    fill={
-                      settings.type === "monochrome"
-                        ? theme.segmentColors[
-                            i % Math.max(1, theme.segmentColors.length)
-                          ]
-                        : colors[i]
-                    }
-                    stroke={theme.wheelBorder}
-                    strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
-                    strokeLinejoin="round"
-                  />
+                    onMouseEnter={interactive ? () => setHovered(i) : undefined}
+                    onMouseLeave={interactive ? () => setHovered((h) => (h === i ? null : h)) : undefined}
+                    onFocus={interactive ? () => setHovered(i) : undefined}
+                    onBlur={interactive ? () => setHovered((h) => (h === i ? null : h)) : undefined}
+                    style={{ pointerEvents: interactive ? "visiblePainted" : "none" }}
+                    role={interactive ? "button" : undefined}
+                    tabIndex={interactive ? 0 : -1}
+                  >
+                    <path
+                      d={seg.d}
+                      fill={
+                        settings.type === "monochrome"
+                          ? theme.segmentColors[
+                              i % Math.max(1, theme.segmentColors.length)
+                            ]
+                          : colors[i]
+                      }
+                      stroke={
+                        isHover
+                          ? theme.accent
+                          : theme.wheelBorder
+                      }
+                      strokeWidth={
+                        isHover
+                          ? Math.max(2, theme.wheelBorderWidth)
+                          : Math.max(0.5, theme.wheelBorderWidth * 0.8)
+                      }
+                      strokeLinejoin="round"
+                      style={
+                        isHover
+                          ? ({ filter: `drop-shadow(0 0 6px ${theme.accent})` } as React.CSSProperties)
+                          : undefined
+                      }
+                      data-hovered={isHover ? "true" : undefined}
+                    />
+                    {isHover && (
+                      <path
+                        d={seg.d}
+                        fill={theme.accent}
+                        opacity={0.14}
+                        stroke="none"
+                      />
+                    )}
+                  </g>
                 );
               })}
 
               {settings.showLabels &&
                 segmentDefs.map((seg, i) => {
                   const p = eligible[i];
+                  const isHover = interactive && hovered === i;
                   const labelAngle = seg.mid * direction;
                   const pos = polarToCartesian(cx, cy, labelR, labelAngle);
                   const textRot =
@@ -422,15 +458,17 @@ function WheelInner({
                           y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={fontSize}
-                          fontWeight={600}
-                          fill={theme.labelColor}
+                          fontSize={isHover ? fontSize + 3 : fontSize}
+                          fontWeight={isHover ? 800 : 600}
+                          fill={isHover ? theme.text : theme.labelColor}
                           style={{
                             pointerEvents: "none",
                             userSelect: "none",
                             paintOrder: "stroke",
-                            stroke: "rgba(0,0,0,0.35)",
-                            strokeWidth: 2.5,
+                            stroke: isHover
+                              ? "rgba(0,0,0,0.75)"
+                              : "rgba(0,0,0,0.35)",
+                            strokeWidth: isHover ? 3.5 : 2.5,
                           }}
                         >
                           {ln}
@@ -443,6 +481,18 @@ function WheelInner({
                   );
                 })}
             </motion.g>
+
+            {count > 0 && !isSpinning && !reduced && (
+              <motion.circle
+                cx={cx}
+                cy={cy}
+                r={innerR * 1.55}
+                fill={theme.hubColor}
+                filter="url(#spinora-halo)"
+                animate={{ opacity: [0.1, 0.28, 0.1] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
 
             {!reduced && (phase === "windup" || phase === "spin" || phase === "landing") && (
               <motion.circle
@@ -531,6 +581,34 @@ function WheelInner({
               opacity={0.5}
             />
           </g>
+        )}
+
+        {count > 0 && !isSpinning && !reduced && (
+          <motion.g
+            animate={{ rotate: 360 }}
+            transition={{ duration: 42, ease: "linear", repeat: Infinity }}
+            style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
+            aria-hidden="true"
+          >
+            <circle
+              cx={cx}
+              cy={cy}
+              r={outerR * 0.96}
+              fill="none"
+              stroke={theme.wheelBorder}
+              strokeWidth="1"
+              strokeDasharray="0.5 16"
+              strokeLinecap="round"
+              opacity={0.7}
+            />
+            <circle
+              cx={cx}
+              cy={cy - outerR * 0.96 + 2}
+              r={2.6}
+              fill={theme.primary}
+              opacity={0.85}
+            />
+          </motion.g>
         )}
       </g>
 

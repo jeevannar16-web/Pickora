@@ -15,6 +15,8 @@ import {
 import { getEligibleParticipants } from "@/lib/random";
 import { useDrawStore, SpinPhase } from "@/stores/drawStore";
 import { usePrefersReducedMotion } from "@/hooks/useMediaQuery";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { PACKS } from "@/features/packs/presets";
 
 type WheelProps = {
   participants: Participant[];
@@ -29,10 +31,14 @@ const Pointer = memo(function Pointer({
   theme,
   size,
   phase,
+  tick,
+  bounceEnabled,
 }: {
   theme: Theme;
   size: number;
   phase: SpinPhase;
+  tick: number;
+  bounceEnabled: boolean;
 }) {
   const cx = size / 2;
   const cxp = cx;
@@ -111,6 +117,20 @@ const Pointer = memo(function Pointer({
         transformBox: "view-box" as const,
       }}
     >
+      {phase === "landing" && bounceEnabled && tick > 0 && (
+        <motion.g
+          key={tick}
+          animate={{ rotate: tick % 2 ? -2.6 : 3.4 }}
+          transition={{ type: "spring", stiffness: 1100, damping: 30 }}
+          style={{
+            transformOrigin: `${cxp}px ${size - 30}px`,
+            transformBox: "view-box" as const,
+          }}
+        >
+          {pointer}
+        </motion.g>
+      )}
+      {!(phase === "landing" && bounceEnabled && tick > 0) && pointer}
       <circle
         cx={cxp}
         cy={size - 12}
@@ -119,7 +139,6 @@ const Pointer = memo(function Pointer({
         stroke="rgba(0,0,0,0.25)"
         strokeWidth="1"
       />
-      {pointer}
     </motion.g>
   );
 });
@@ -134,11 +153,15 @@ function WheelInner({
   phase,
   winnerIndexes,
   ghostName,
+  landingTick,
+  bounceEnabled,
 }: Omit<WheelProps, "isSpinning"> & {
   isSpinning: boolean;
   phase: SpinPhase;
   winnerIndexes: number[];
   ghostName: string;
+  landingTick: number;
+  bounceEnabled: boolean;
 }) {
   const eligible = useMemo(
     () => getEligibleParticipants(participants),
@@ -147,6 +170,11 @@ function WheelInner({
   const count = eligible.length;
   const reduced = usePrefersReducedMotion() || settings.reduceMotionOn;
   const highSpeed = !reduced && (phase === "windup" || phase === "spin");
+  const [hovered, setHovered] = useState<number | null>(null);
+  const interactive = !isSpinning && !highSpeed;
+  const activePack = useSettingsStore((s) => s.activePack);
+  const pack = PACKS[activePack] ?? PACKS.custom;
+  const packIcons = pack.icons ?? [];
 
   // Sequential reveal for multi-winner draws: each winner's slice lights up in
   // turn after the wheel stops (approach b), so the outcome is showcased on the
@@ -174,7 +202,6 @@ function WheelInner({
   const outerR = size / 2 - 6;
   const innerR = size * 0.18;
   const labelR = size * 0.36;
-  const direction = settings.spinDirection === "counterclockwise" ? -1 : 1;
   const slice = count > 0 ? TAU / count : TAU;
 
   const colors = useMemo(
@@ -364,11 +391,20 @@ function WheelInner({
         )}
       </defs>
 
-      <g filter="url(#wheel-shadow)">
+      <ellipse
+        cx={cx}
+        cy={cy}
+        rx={outerR * 1.02}
+        ry={outerR * 0.92}
+        fill="rgba(0,0,0,0.5)"
+        filter="url(#wheel-shadow)"
+        aria-hidden="true"
+      />
+      <g>
         {count === 0 ? (
           emptyRing
         ) : (
-          <g transform={`rotate(${rotation} ${cx} ${cy})`} filter={highSpeed ? "url(#spinora-blur)" : undefined}>
+          <g transform={`rotate(${rotation} ${cx} ${cy})`}>
             {(settings.type === "classic" || settings.type === "party") && (
               <path
                 d={ringPath}
@@ -382,31 +418,106 @@ function WheelInner({
             >
               {segmentDefs.map((seg, i) => {
                 const p = eligible[i];
+                const isHover = interactive && hovered === i;
                 return (
-                  <path
+                  <g
                     key={p.id}
-                    d={seg.d}
-                    fill={
-                      settings.type === "monochrome"
-                        ? theme.segmentColors[
-                            i % Math.max(1, theme.segmentColors.length)
-                          ]
-                        : colors[i]
-                    }
-                    stroke={theme.wheelBorder}
-                    strokeWidth={Math.max(0.5, theme.wheelBorderWidth * 0.8)}
-                    strokeLinejoin="round"
-                  />
+                    onMouseEnter={interactive ? () => setHovered(i) : undefined}
+                    onMouseLeave={interactive ? () => setHovered((h) => (h === i ? null : h)) : undefined}
+                    onFocus={interactive ? () => setHovered(i) : undefined}
+                    onBlur={interactive ? () => setHovered((h) => (h === i ? null : h)) : undefined}
+                    style={{ pointerEvents: interactive ? "visiblePainted" : "none" }}
+                    role={interactive ? "button" : undefined}
+                    tabIndex={interactive ? 0 : -1}
+                  >
+                    <path
+                      d={seg.d}
+                      fill={
+                        settings.type === "monochrome"
+                          ? theme.segmentColors[
+                              i % Math.max(1, theme.segmentColors.length)
+                            ]
+                          : colors[i]
+                      }
+                      stroke={
+                        isHover
+                          ? theme.accent
+                          : theme.wheelBorder
+                      }
+                      strokeWidth={
+                        isHover
+                          ? Math.max(2, theme.wheelBorderWidth)
+                          : Math.max(0.5, theme.wheelBorderWidth * 0.8)
+                      }
+                      strokeLinejoin="round"
+                      style={
+                        isHover
+                          ? ({ filter: `drop-shadow(0 0 6px ${theme.accent})` } as React.CSSProperties)
+                          : undefined
+                      }
+                      data-hovered={isHover ? "true" : undefined}
+                    />
+                    {isHover && (
+                      <path
+                        d={seg.d}
+                        fill={theme.accent}
+                        opacity={0.14}
+                        stroke="none"
+                      />
+                    )}
+                  </g>
                 );
               })}
 
+              {count > 0 &&
+                pack.id !== 'custom' &&
+                segmentDefs.map((seg, i) => {
+                  const labelAngle = seg.mid;
+                  const iconRadius = pack.id === 'numbers' ? labelR : labelR * 0.56;
+                  const pos = polarToCartesian(cx, cy, iconRadius, labelAngle);
+                  const textRot = radiansToDegrees(seg.mid) + 90;
+                  const iconFont =
+                    pack.id === 'numbers'
+                      ? Math.max(12, Math.min(22, size / (largeCount ? 13 : mediumCount ? 11 : 8.5)))
+                      : Math.max(9, Math.min(19, size / (largeCount ? 26 : mediumCount ? 22 : 15)));
+                  return (
+                    <g
+                      key={`pack-${i}`}
+                      transform={`translate(${pos.x} ${pos.y}) rotate(${textRot})`}
+                    >
+                      <text
+                        x={0}
+                        y={0}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={iconFont}
+                        fontWeight={pack.id === 'numbers' ? 800 : 600}
+                        fill={pack.id === 'numbers' ? theme.labelColor : 'currentColor'}
+                        style={{
+                          pointerEvents: "none",
+                          userSelect: "none",
+                          paintOrder: "stroke",
+                          stroke:
+                            pack.id === 'numbers'
+                              ? `rgba(0,0,0,0.55)`
+                              : "rgba(0,0,0,0.45)",
+                          strokeWidth: pack.id === 'numbers' ? 3 : 1.5,
+                        }}
+                        aria-hidden="true"
+                      >
+                        {pack.id === 'numbers' ? i + 1 : packIcons[i % packIcons.length]}
+                      </text>
+                    </g>
+                  );
+                })}
+
               {settings.showLabels &&
+                pack.id !== 'numbers' &&
                 segmentDefs.map((seg, i) => {
                   const p = eligible[i];
-                  const labelAngle = seg.mid * direction;
-                  const pos = polarToCartesian(cx, cy, labelR, labelAngle);
-                  const textRot =
-                    (radiansToDegrees(seg.mid) * direction + 90) % 360;
+                  const isHover = interactive && hovered === i;
+                  const pos = polarToCartesian(cx, cy, labelR, seg.mid);
+                  const textRot = radiansToDegrees(seg.mid) + 90;
                   const lines = truncated
                     ? [truncateLabel(p.name, maxChars)]
                     : wrapLabel(p.name, Math.max(4, settings.labelSize), 2);
@@ -422,15 +533,17 @@ function WheelInner({
                           y={(li - (lines.length - 1) / 2) * fontSize * 1.15}
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={fontSize}
-                          fontWeight={600}
-                          fill={theme.labelColor}
+                          fontSize={isHover ? fontSize + 3 : fontSize}
+                          fontWeight={isHover ? 800 : 600}
+                          fill={isHover ? theme.text : theme.labelColor}
                           style={{
                             pointerEvents: "none",
                             userSelect: "none",
                             paintOrder: "stroke",
-                            stroke: "rgba(0,0,0,0.35)",
-                            strokeWidth: 2.5,
+                            stroke: isHover
+                              ? "rgba(0,0,0,0.75)"
+                              : "rgba(0,0,0,0.35)",
+                            strokeWidth: isHover ? 3.5 : 2.5,
                           }}
                         >
                           {ln}
@@ -443,6 +556,18 @@ function WheelInner({
                   );
                 })}
             </motion.g>
+
+            {count > 0 && !isSpinning && !reduced && (
+              <motion.circle
+                cx={cx}
+                cy={cy}
+                r={innerR * 1.55}
+                fill={theme.hubColor}
+                filter="url(#spinora-halo)"
+                animate={{ opacity: [0.1, 0.28, 0.1] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
 
             {!reduced && (phase === "windup" || phase === "spin" || phase === "landing") && (
               <motion.circle
@@ -460,6 +585,7 @@ function WheelInner({
                 const seg = segmentDefs[wi];
                 if (!seg) return null;
                 const isLatest = ri === revealCount - 1;
+                const winPos = polarToCartesian(cx, cy, labelR * 0.95, seg.mid);
                 return (
                   <g key={`win-reveal-${wi}`}>
                     {isLatest && (
@@ -475,6 +601,23 @@ function WheelInner({
                         }}
                       />
                     )}
+                    {isLatest && (
+                      <motion.circle
+                        cx={winPos.x}
+                        cy={winPos.y}
+                        r={labelR * 0.42}
+                        fill="none"
+                        stroke={theme.accent}
+                        strokeWidth={2.5}
+                        initial={{ opacity: 0.9, scale: 0.35 }}
+                        animate={{ opacity: 0, scale: 2.1 }}
+                        transition={{ duration: 0.95, ease: "easeOut" }}
+                        style={{
+                          transformOrigin: `${winPos.x}px ${winPos.y}px`,
+                          transformBox: "view-box" as const,
+                        }}
+                      />
+                    )}
                     <motion.path
                       d={seg.d}
                       fill="none"
@@ -485,12 +628,12 @@ function WheelInner({
                       initial={{ opacity: 0, scale: 1 }}
                       animate={
                         isLatest
-                          ? { opacity: [0, 1, 1], scale: [1, 1.09, 1.04] }
+                          ? { opacity: [0, 1, 0.95, 1], scale: [1, 1.12, 1.06, 1.08] }
                           : { opacity: 0.9, scale: 1 }
                       }
                       transition={
                         isLatest
-                          ? { duration: 0.5, times: [0, 0.5, 1], ease: "easeOut" }
+                          ? { duration: 0.62, times: [0, 0.4, 0.7, 1], ease: "easeOut" }
                           : { duration: 0.3 }
                       }
                       style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
@@ -507,7 +650,32 @@ function WheelInner({
               stroke={theme.wheelBorder}
               strokeWidth={2}
             />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={innerR * 0.35}
+              fill="none"
+              stroke={theme.primary}
+              opacity={0.4}
+              filter="url(#spinora-halo)"
+            />
             <circle cx={cx} cy={cy} r={innerR} fill="url(#spinora-hub-sheen)" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={innerR * 0.96}
+              fill="none"
+              stroke="rgba(255,255,255,0.4)"
+              strokeWidth={innerR * 0.07}
+              opacity={0.35}
+            />
+            <circle
+              cx={cx}
+              cy={cy - innerR * 0.55}
+              r={innerR * 0.32}
+              fill="#ffffff"
+              opacity={0.12}
+            />
             <circle
               cx={cx}
               cy={cy}
@@ -532,9 +700,75 @@ function WheelInner({
             />
           </g>
         )}
+
+        {count > 0 && !isSpinning && !reduced && (
+          <motion.g
+            animate={{ rotate: 360 }}
+            transition={{ duration: 42, ease: "linear", repeat: Infinity }}
+            style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: "view-box" as const }}
+            aria-hidden="true"
+          >
+            <circle
+              cx={cx}
+              cy={cy}
+              r={outerR * 0.96}
+              fill="none"
+              stroke={theme.wheelBorder}
+              strokeWidth="1"
+              strokeDasharray="0.5 16"
+              strokeLinecap="round"
+              opacity={0.7}
+            />
+            <circle
+              cx={cx}
+              cy={cy - outerR * 0.96 + 2}
+              r={2.6}
+              fill={theme.primary}
+              opacity={0.85}
+            />
+          </motion.g>
+        )}
       </g>
 
-      <Pointer theme={theme} size={size} phase={phase} />
+      {interactive && hovered !== null && eligible[hovered] && (
+        <g pointerEvents="none" aria-hidden="true">
+          <motion.g
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            <rect
+              x={cx - Math.min(110, Math.max(42, eligible[hovered].name.length * 8 + 30)) / 2}
+              y={cy - outerR + 4}
+              width={Math.min(110, Math.max(42, eligible[hovered].name.length * 8 + 30))}
+              height={24}
+              rx={12}
+              fill={theme.surface}
+              stroke={theme.accent}
+              strokeWidth={1}
+            />
+            <text
+              x={cx}
+              y={cy - outerR + 16}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={12.5}
+              fontWeight={700}
+              fill={theme.text}
+            >
+              {eligible[hovered].name}
+            </text>
+          </motion.g>
+        </g>
+      )}
+
+      <Pointer
+        theme={theme}
+        size={size}
+        phase={phase}
+        tick={landingTick}
+        bounceEnabled={bounceEnabled}
+      />
     </svg>
   );
 }
@@ -544,6 +778,7 @@ export const Wheel = memo(function Wheel(props: WheelProps) {
   const phase = useDrawStore((s) => s.phase);
   const winnerIndexes = useDrawStore((s) => s.winnerIndexes);
   const ghostName = useDrawStore((s) => s.ghostName);
+  const landingTick = useDrawStore((s) => s.landingTick);
   return (
     <div
       className="relative w-full select-none"
@@ -560,6 +795,8 @@ export const Wheel = memo(function Wheel(props: WheelProps) {
         phase={phase}
         winnerIndexes={winnerIndexes}
         ghostName={ghostName}
+        landingTick={landingTick}
+        bounceEnabled={settings.pointerBounce}
       />
       {isSpinning && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

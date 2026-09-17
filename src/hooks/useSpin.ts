@@ -9,6 +9,7 @@ import { getEligibleParticipants, generateDrawId, selectRandomWinners, selectRan
 import { computeFinalWheelRotation, getSegmentIndexFromAngle } from '@/lib/wheelGeometry';
 import { validateParticipantCount } from '@/lib/validation';
 import { audio } from '@/lib/audio';
+import { confettiBurst, confettiRing } from '@/lib/confetti';
 import { Participant } from '@/types/participant';
 import { usePrefersReducedMotion } from './useMediaQuery';
 
@@ -59,6 +60,8 @@ export function useSpin() {
   const allowDuplicates = useSettingsStore((s) => s.allowDuplicates);
   const removeWinnersSetting = useSettingsStore((s) => s.removeWinners);
   const sound = useSettingsStore((s) => s.sound);
+  const theme = useSettingsStore((s) => s.theme);
+  const activePack = useSettingsStore((s) => s.activePack);
   const isSpinning = useUIStore((s) => s.isSpinning);
   const setIsSpinning = useUIStore((s) => s.setIsSpinning);
   const setWinnerModalOpen = useUIStore((s) => s.setWinnerModalOpen);
@@ -68,6 +71,7 @@ export function useSpin() {
   const setLastResult = useDrawStore((s) => s.setLastResult);
   const setPhase = useDrawStore((s) => s.setPhase);
   const setWinnerIndexes = useDrawStore((s) => s.setWinnerIndexes);
+  const bumpLandingTick = useDrawStore((s) => s.bumpLandingTick);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const eligible = useMemo(() => getEligibleParticipants(participants), [participants]);
@@ -156,6 +160,9 @@ export function useSpin() {
       if (!reduced) {
         setPhase('win');
         if (dramaSound) audio.snap();
+        // A light burst on landing — the modal still gets the full fireworks.
+        confettiBurst(theme.confettiColors, 90);
+        confettiRing(theme.confettiColors, 520);
       }
 
       const commit = () => {
@@ -165,7 +172,15 @@ export function useSpin() {
         setIsSpinning(false);
 
         if (masterOn && sound.winnerSoundEnabled) {
-          audio.winner();
+          if (activePack === 'fruits') {
+            audio.fruitWinner();
+          } else if (activePack === 'animals') {
+            audio.animalWinner();
+          } else if (activePack === 'numbers') {
+            audio.numbersWinner();
+          } else {
+            audio.winner();
+          }
         }
 
         const drawId = generateDrawId();
@@ -285,9 +300,16 @@ export function useSpin() {
           const seg = getSegmentIndexFromAngle(current, count);
           if (seg !== lastSegRef && seg >= 0) {
             lastSegRef = seg;
+            if (phaseRef === 'landing') {
+              bumpLandingTick();
+            }
             const freq = Math.round(Math.min(1000, 430 + speedRef * 0.62));
             const heaviness = Math.min(0.042, Math.max(0.02, 0.035 - speedRef * 0.00002));
-            audio.tickTension(freq, heaviness);
+            if (activePack === 'numbers') {
+              audio.lockTick(freq, heaviness);
+            } else {
+              audio.tickTension(freq, heaviness);
+            }
           }
         }
         lastFrameRef = now;
@@ -326,6 +348,8 @@ export function useSpin() {
     allowDuplicates,
     settings,
     sound,
+    theme,
+    activePack,
     prefersReducedMotion,
     removeWinnersSetting,
     wheelName,
@@ -338,6 +362,7 @@ export function useSpin() {
     setLastResult,
     setPhase,
     setWinnerIndexes,
+    bumpLandingTick,
   ]);
 
   return {

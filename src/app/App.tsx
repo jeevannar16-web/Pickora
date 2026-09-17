@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronsDown } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
+import { AmbientBackground } from '@/components/layout/AmbientBackground';
 import { WheelStage } from '@/components/layout/WheelStage';
 import { ParticipantPanel } from '@/features/participants/ParticipantPanel';
 import { SettingsPanel } from '@/features/settings/SettingsPanel';
@@ -54,9 +55,12 @@ export default function App() {
   if (isPresenting) return <PresentationMode />;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-bg text-text">
-      <Header />
-      {isMobile ? <MobileLayout /> : <DesktopLayout />}
+    <div className="relative flex h-screen flex-col overflow-hidden bg-bg text-text">
+      <AmbientBackground />
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        <Header />
+        {isMobile ? <MobileLayout /> : <DesktopLayout />}
+      </div>
       <WinnerModal />
       <Toast />
       <ConfirmationDialog />

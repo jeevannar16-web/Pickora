@@ -4,6 +4,8 @@ import { Theme } from '../types/theme';
 import { THEMES } from '../features/themes/presets';
 import { WinnerMode } from '../types/settings';
 import { SoundSettings } from '../types/sound';
+import { Pack, PackId } from '../types/pack';
+import { PACKS } from '../features/packs/presets';
 import { useWheelStore } from './wheelStore';
 import { useParticipantStore } from './participantStore';
 import { getEligibleParticipants } from '../lib/random';
@@ -17,6 +19,7 @@ type SettingsState = {
   winnerCount: number;
   allowDuplicates: boolean;
   removeWinners: boolean;
+  activePack: PackId;
   setTheme: (id: string) => void;
   saveCustomTheme: (theme: Theme) => void;
   updateActiveTheme: (updates: Partial<Theme>) => void;
@@ -26,6 +29,7 @@ type SettingsState = {
   setWinnerCount: (count: number) => void;
   setAllowDuplicates: (b: boolean) => void;
   setRemoveWinners: (b: boolean) => void;
+  setPack: (id: PackId) => void;
 };
 
 function resolveTheme(activeId: string, customThemes: Theme[]): Theme {
@@ -57,6 +61,15 @@ const defaultSound: SoundSettings = {
   reducedSoundMode: false,
 };
 
+function applyPackBundles(pack: Pack, setSound: (u: Partial<SoundSettings>) => void) {
+  if (pack.motion) {
+    useWheelStore.getState().setSettings(pack.motion);
+  }
+  if (pack.sound) {
+    setSound(pack.sound);
+  }
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
@@ -68,6 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
       winnerCount: 1,
       allowDuplicates: false,
       removeWinners: false,
+      activePack: 'custom',
 
       setTheme: (activeThemeId) => {
         const theme = resolveTheme(activeThemeId, get().customThemes);
@@ -105,6 +119,11 @@ export const useSettingsStore = create<SettingsState>()(
       setWinnerCount: (winnerCount) => set({ winnerCount }),
       setAllowDuplicates: (allowDuplicates) => set({ allowDuplicates }),
       setRemoveWinners: (removeWinners) => set({ removeWinners }),
+      setPack: (activePack) => {
+        const pack = PACKS[activePack] ?? PACKS.custom;
+        set({ activePack });
+        applyPackBundles(pack, get().setSound);
+      },
     }),
     {
       name: 'spinora-settings',
@@ -116,6 +135,7 @@ export const useSettingsStore = create<SettingsState>()(
         winnerCount: state.winnerCount,
         allowDuplicates: state.allowDuplicates,
         removeWinners: state.removeWinners,
+        activePack: state.activePack,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

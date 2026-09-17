@@ -31,7 +31,7 @@ const defaultSettings: WheelSettings = {
   customRotations: null,
   easing: 'easeOutQuart',
   pointerBounce: true,
-  segmentSpacing: 1,
+  segmentSpacing: 0,
   showLabels: true,
   truncateLabels: true,
   reduceMotionOn: false,
@@ -71,6 +71,14 @@ export const useWheelStore = create<WheelState>()(
     }),
     {
       name: 'spinora-wheel',
+      version: 1,
+      migrate: (persisted) => {
+        const state = (persisted ?? {}) as { settings?: Partial<WheelSettings> };
+        if (state.settings) {
+          state.settings = { ...state.settings, segmentSpacing: 0 };
+        }
+        return state as unknown as WheelState;
+      },
     }
   )
 );

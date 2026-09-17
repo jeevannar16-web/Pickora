@@ -16,11 +16,13 @@ type DrawState = {
   phase: SpinPhase;
   winnerIndexes: number[];
   ghostName: string;
+  landingTick: number;
   setLastResult: (r: DrawResult | null) => void;
   setEligibleCount: (n: number) => void;
   setPhase: (phase: SpinPhase) => void;
   setWinnerIndexes: (indexes: number[]) => void;
   setGhostName: (name: string) => void;
+  bumpLandingTick: () => void;
 };
 
 export const useDrawStore = create<DrawState>()((set) => ({
@@ -28,10 +30,12 @@ export const useDrawStore = create<DrawState>()((set) => ({
   eligibleCount: 0,
   phase: 'idle',
   winnerIndexes: [],
-  ghostName: '',
+  ghostName: 'Add names & spin',
+  landingTick: 0,
   setLastResult: (lastResult) => set({ lastResult }),
   setEligibleCount: (eligibleCount) => set({ eligibleCount }),
   setPhase: (phase) => set({ phase }),
   setWinnerIndexes: (winnerIndexes) => set({ winnerIndexes }),
   setGhostName: (ghostName) => set({ ghostName }),
+  bumpLandingTick: () => set((s) => ({ landingTick: s.landingTick + 1 })),
 }));

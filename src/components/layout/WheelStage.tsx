@@ -12,21 +12,6 @@ import { useSpin } from '@/hooks/useSpin';
 import { useMediaQuery, usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
-function phaseShadow(phase: SpinPhase): string {
-  switch (phase) {
-    case 'windup':
-      return 'drop-shadow(0 8px 26px rgba(0,0,0,0.5)) drop-shadow(0 0 18px var(--sp-primary)33)';
-    case 'spin':
-      return 'drop-shadow(0 4px 32px rgba(0,0,0,0.62)) drop-shadow(0 0 24px var(--sp-accent)45)';
-    case 'landing':
-      return 'drop-shadow(0 2px 40px rgba(0,0,0,0.78)) drop-shadow(0 0 34px var(--sp-accent)66)';
-    case 'win':
-      return 'drop-shadow(0 10px 24px rgba(0,0,0,0.5)) drop-shadow(0 0 26px var(--sp-primary)44)';
-    default:
-      return 'drop-shadow(0 10px 22px rgba(0,0,0,0.35))';
-  }
-}
-
 function phaseScale(phase: SpinPhase): number {
   switch (phase) {
     case 'windup':
@@ -60,19 +45,23 @@ export function WheelStage() {
 
   const displaySize = isMobile ? 280 : 420;
   const actActive = phase === 'windup' || phase === 'spin' || phase === 'landing';
-  const dimActive = !prefersReducedMotion && actActive;
+  const dimActive = !prefersReducedMotion && (actActive || phase === 'win');
+  const idleAmbient = !prefersReducedMotion && !settings.reduceMotionOn && !isSpinning && canSpin;
 
   return (
     <div className="relative flex h-full flex-col items-center justify-between overflow-hidden p-4">
       {dimActive && (
         <motion.div
           initial={false}
-          animate={{ opacity: phase === 'landing' ? 0.55 : phase === 'spin' ? 0.34 : 0.24 }}
+          animate={{
+            opacity:
+              phase === 'win' ? 0.58 : phase === 'landing' ? 0.55 : phase === 'spin' ? 0.34 : 0.24,
+          }}
           transition={{ duration: 0.4 }}
           className="pointer-events-none fixed inset-0 z-30"
           style={{
             background:
-              'radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.42) 78%, rgba(0,0,0,0.66) 100%)',
+              'radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.45) 74%, rgba(0,0,0,0.72) 100%)',
           }}
         />
       )}
@@ -98,6 +87,17 @@ export function WheelStage() {
       </div>
 
       <div className="relative flex flex-1 items-center justify-center">
+        {idleAmbient && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute h-64 w-64 rounded-full md:h-80 md:w-80"
+            style={{
+              background: `radial-gradient(circle, ${theme.primary}55 0%, transparent 70%)`,
+            }}
+            animate={{ opacity: [0.55, 1, 0.55] }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
         <motion.div
           className="relative"
           style={{
@@ -108,18 +108,28 @@ export function WheelStage() {
           animate={
             prefersReducedMotion || settings.reduceMotionOn
               ? { scale: 1 }
-              : { scale: phaseScale(phase) }
+              : phase === 'win'
+                ? { scale: [1, 1.05, 0.99, 1] }
+                : { scale: phaseScale(phase) }
           }
-          transition={{ type: 'spring', stiffness: 110, damping: 16 }}
+          transition={
+            phase === 'win'
+              ? { duration: 0.5, times: [0, 0.4, 0.75, 1], ease: 'easeOut' }
+              : { type: 'spring', stiffness: 110, damping: 16 }
+          }
         >
           <motion.div
-            className="h-full w-full transition-[filter] duration-300"
-            style={{
-              filter:
-                prefersReducedMotion || settings.reduceMotionOn
-                  ? 'drop-shadow(0 10px 22px rgba(0,0,0,0.35))'
-                  : phaseShadow(phase),
-            }}
+            className="h-full w-full"
+            animate={
+              idleAmbient
+                ? { scale: [1, 1.02, 1], y: [0, -3.5, 0] }
+                : { scale: 1, y: 0 }
+            }
+            transition={
+              idleAmbient
+                ? { duration: 4.6, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 0.1 }
+            }
           >
             <Wheel
               participants={participants}

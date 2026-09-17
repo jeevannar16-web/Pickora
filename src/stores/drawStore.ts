@@ -30,7 +30,7 @@ export const useDrawStore = create<DrawState>()((set) => ({
   eligibleCount: 0,
   phase: 'idle',
   winnerIndexes: [],
-  ghostName: '',
+  ghostName: 'Add names & spin',
   landingTick: 0,
   setLastResult: (lastResult) => set({ lastResult }),
   setEligibleCount: (eligibleCount) => set({ eligibleCount }),

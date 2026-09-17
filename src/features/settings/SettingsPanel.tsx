@@ -9,6 +9,7 @@ import { AnimationSettingsTab } from './AnimationSettingsTab';
 import { SoundSettingsTab } from './SoundSettingsTab';
 import { WinnerSettingsTab } from './WinnerSettingsTab';
 import { PackSelector } from '@/features/packs/PackSelector';
+import { CoachMarks } from './CoachMarks';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useParticipantStore } from '@/stores/participantStore';
 import { getEligibleParticipants } from '@/lib/random';
@@ -47,6 +48,7 @@ export function SettingsPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="spinora-scroll flex-1 overflow-y-auto p-3">
+        <CoachMarks />
         <section className="space-y-4" aria-label="Quick options">
           <div>
             <h3 className="font-display text-sm font-semibold text-text">Quick options</h3>

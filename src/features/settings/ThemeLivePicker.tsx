@@ -2,30 +2,25 @@ import { THEMES } from '@/features/themes/presets';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Theme } from '@/types/theme';
-import { arcPath, TAU } from '@/lib/wheelGeometry';
+import { MiniWheel } from '@/components/wheel/MiniWheel';
 import { cn } from '@/lib/utils';
 
-function ThemeThumb({ theme, size = 44 }: { theme: Theme; size?: number }) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const outer = size / 2 - 3;
-  const inner = size * 0.24;
-  const count = theme.segmentColors.length;
-  const slice = TAU / count;
+function ThemeThumb({ theme, active }: { theme: Theme; active: boolean }) {
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
-      <circle cx={cx} cy={cy} r={outer} fill={theme.surface} stroke={theme.wheelBorder} strokeWidth={0.6} />
-      {theme.segmentColors.slice(0, 8).map((c, i) => (
-        <path
-          key={i}
-          d={arcPath(cx, cy, inner, outer, i * slice + 0.02, (i + 1) * slice - 0.02)}
-          fill={c}
-          stroke={theme.wheelBorder}
-          strokeWidth={0.35}
-        />
-      ))}
-      <circle cx={cx} cy={cy} r={inner * 0.72} fill={theme.hubColor} />
-    </svg>
+    <div className="relative">
+      <MiniWheel
+        colors={theme.segmentColors}
+        hubColor={theme.hubColor}
+        size={40}
+        type={theme.motion?.type === 'compact' ? 'compact' : theme.motion?.type}
+        labelColor={theme.labelColor}
+      />
+      {active && (
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white shadow-md">
+          ✓
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -54,7 +49,7 @@ export function ThemeLivePicker() {
           aria-pressed={activeThemeId === t.id}
           aria-label={`Apply ${t.name} theme`}
         >
-          <ThemeThumb theme={t} />
+          <ThemeThumb theme={t} active={activeThemeId === t.id} />
           <span className="mt-0.5 text-center text-xs font-semibold text-text">{t.name}</span>
           {t.tag && <span className="-mt-0.5 text-center text-[10px] leading-tight text-muted">{t.tag}</span>}
         </button>

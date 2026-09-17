@@ -5,6 +5,8 @@ import { type ReactNode } from 'react';
 import { useWheelStore } from '@/stores/wheelStore';
 import { WheelType } from '@/types/wheel';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { MiniWheel } from '@/components/wheel/MiniWheel';
+import { cn } from '@/lib/utils';
 
 const WHEEL_TYPES: { id: WheelType; label: string }[] = [
   { id: 'classic', label: 'Classic' },
@@ -40,22 +42,41 @@ export function WheelSettingsTab() {
 
   return (
     <div className="space-y-4">
-      <Field label="Wheel type" hint="The overall look of the wheel. Your theme picks one for you.">
-        <div className="grid grid-cols-2 gap-1.5">
-          {WHEEL_TYPES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setType(t.id)}
-              className={
-                settings.type === t.id
-                  ? 'rounded-lg bg-primary px-2 py-1.5 text-xs font-medium text-white'
-                  : 'rounded-lg border border-border-c bg-surface px-2 py-1.5 text-xs text-muted hover:border-primary/50 hover:text-text'
-              }
-              aria-pressed={settings.type === t.id}
-            >
-              {t.label}
-            </button>
-          ))}
+      <Field label="Wheel type" hint="A live preview of each style. Your theme picks one for you.">
+        <div className="grid grid-cols-2 gap-2">
+          {WHEEL_TYPES.map((t) => {
+            const active = settings.type === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setType(t.id)}
+                aria-pressed={active}
+                className={cn(
+                  'flex flex-col items-center gap-1 rounded-xl border px-2 pb-2 pt-2.5 transition-all',
+                  active
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary/40'
+                    : 'border-border-c bg-surface hover:border-primary/50 hover:bg-elevated/60'
+                )}
+              >
+                <MiniWheel
+                  colors={theme.segmentColors}
+                  hubColor={theme.hubColor}
+                  type={t.id}
+                  size={40}
+                  rotating={active}
+                  labelColor={theme.labelColor}
+                />
+                <span
+                  className={cn(
+                    'text-[11px] font-medium',
+                    active ? 'text-primary' : 'text-muted'
+                  )}
+                >
+                  {t.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Field>
 
